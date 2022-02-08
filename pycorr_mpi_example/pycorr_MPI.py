@@ -14,23 +14,6 @@ import numpy as np
 
 #Functions for moving from sky to cartesian coordinates
 
-def SkyToUnitSphere(ra,dec):
-    ra = np.deg2rad(ra)
-    dec = np.deg2rad(dec)
-
-    x = np.cos(dec)*np.cos(ra)
-    y = np.cos(dec)*np.sin(ra)
-    z = np.sin(dec)
-    return np.array([x,y,z]).T
-
-
-def SkyToCartesian(ra,dec,z,cosmo):
-    pos = SkyToUnitSphere(ra,dec)
-    r = cosmo.comoving_radial_distance(z)
-    return (r[:,None]*pos).T
-
-
-
 
 #Functions for reading FITS and HDF datasets
 
@@ -186,17 +169,18 @@ if __name__ == "__main__":
 
 
     #Converting coordinates
-
-    pos = SkyToCartesian(ra,dec,z,cosmo)
-    pos_r = SkyToCartesian(ra_r,dec_r,z_r,cosmo)
+    dists = cosmo.comoving_radial_distance(z)
+    dists_r = cosmo.comoving_radial_distance(z_r)
+    pos = pycorr.utils.sky_to_cartesian(np.array([ra,dec,dists]))
+    pos_r =pycorr.utils.sky_to_cartesian(np.array([ra_r,dec_r,dists_r]))
 
 
 
 
     #Cutting the z's
-    pos = (pos.T[(z>z_low)&(z<z_high)]).T
+    pos = (np.array(pos).T[(z>z_low)&(z<z_high)])
 
-    pos_r = (pos_r.T[(z_r>z_low)&(z_r<z_high)]).T
+    pos_r = (np.array(pos_r).T[(z_r>z_low)&(z_r<z_high)])
 
     weights = weights[(z>z_low)&(z<z_high)]
 
@@ -212,8 +196,8 @@ if __name__ == "__main__":
     #Making the computation
 
     result = TwoPointCorrelationFunction('smu', edges, data_positions1=pos, data_weights1=weights,
-                                         randoms_positions1=pos_r, randoms_weights1=weights_r, position_type='xyz',
-                                         engine='corrfunc', compute_sepavg=False, nthreads=threads_per_proc,mpicomm = comm)
+                                         randoms_positions1=pos_r, randoms_weights1=weights_r, position_type='pos',
+                                         engine='corrfunc', compute_sepsavg=False, nthreads=threads_per_proc,mpicomm = comm,mpiroot=0)
 
     #Saving
 

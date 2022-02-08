@@ -18,4 +18,4 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 conda activate analysis
 
-mpirun -map-by ppr:4:socket -np 3 python CF_script.py conf
+mpirun -map-by ppr:4:socket -np 3 python pycorr_MPI.py example_conf

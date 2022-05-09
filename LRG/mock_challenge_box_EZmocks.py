@@ -162,7 +162,7 @@ for i in range(1000):
     result.save_txt(savepath+savefile+"_poles.dat",  ells=(0, 2, 4))
     print("results saved")
 
-
+print("completed")
 #dir(result)
 
 

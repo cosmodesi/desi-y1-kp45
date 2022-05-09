@@ -261,7 +261,7 @@ def plot_EZmock_box_realisation(pathtwopoint,path_abacus_CF,rebinfactor_s,multip
 rebinfactor_s=4
 plotpath="plots/mockchallenge/cov/"
 savepath="samples/mockchallenge/cov/"
-pathtwopoint="samples/mockchallenge/EZmocks/EZmock_results_"
+pathtwopoint="samples/mockchallenge/EZmocks/rand20/EZmock_results_"
 
 
 
@@ -280,9 +280,9 @@ convert_abacus(path_abacus_CF,savepath_abacus_CF,20,"68",rebinfactor_s)
 convert_abacus(path_abacus_CF,savepath_abacus_CF,20,"81",rebinfactor_s)
 
 #convert all CF with 5X randoms for all redshift slices
-convert_abacus(path_abacus_CF,savepath_abacus_CF,5,"46",rebinfactor_s)
-convert_abacus(path_abacus_CF,savepath_abacus_CF,5,"68",rebinfactor_s)
-convert_abacus(path_abacus_CF,savepath_abacus_CF,5,"81",rebinfactor_s)
+convert_abacus(path_abacus_CF,savepath_abacus_CF+'rand5/',5,"46",rebinfactor_s)
+convert_abacus(path_abacus_CF,savepath_abacus_CF+'rand5/',5,"68",rebinfactor_s)
+convert_abacus(path_abacus_CF,savepath_abacus_CF+'rand5/',5,"81",rebinfactor_s)
 
 
 
@@ -307,6 +307,15 @@ multipole_n=2
 plot_EZmock_realisation(pathtwopoint,path_abacus_CF,rebinfactor_s,multipole_n,20,"46_",plotpath,"compare_EZmocks_real","0.4<z<0.6, l=4")
 plot_EZmock_realisation(pathtwopoint,path_abacus_CF,rebinfactor_s,multipole_n,20,"68_",plotpath,"compare_EZmocks_real","0.6<z<0.8, l=4")
 plot_EZmock_realisation(pathtwopoint,path_abacus_CF,rebinfactor_s,multipole_n,20,"81_",plotpath,"compare_EZmocks_real","0.8<z<1.1, l=4")
+
+
+
+
+
+
+
+
+
 
 
 #do stuff for the box simulations

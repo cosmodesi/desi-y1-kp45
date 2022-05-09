@@ -115,7 +115,7 @@ print("random assambled")
 
 
 #cut down the data and random to the selected redshift range and to the DESI Y5 footprint
-random_ranged=random[(random['z']>z_min)&(random['z']<z_max)&((random['flag']&2**1)!=0)]
+random_ranged=random[(random['z']>z_min)&(random['z']<z_max)&((random['flag']&2**1)!=0)&((random['flag']&2**3)!=0)]
 print("range selected")
 #convert redshifts into distances ...note: maybe I should check if the cartesian conversion is truly neccesiary and pycorr can handle spherical coordinates
 rand_pos=distance_conversion(cosmo,random_ranged)
@@ -146,7 +146,7 @@ for i in range(100):
     #load data file
     data=basicreader(data_file)
     print("data file read in")
-    data_ranged=data[(data['z']>z_min)&(data['z']<z_max)&((data['flag']&2**1)!=0)]
+    data_ranged=data[(data['z']>z_min)&(data['z']<z_max)&((data['flag']&2**1)!=0)&((data['flag']&2**3)!=0)]
     data_pos=distance_conversion(cosmo,data_ranged)
 
         
@@ -172,7 +172,7 @@ for i in range(100):
     result.save_txt("../samples/mockchallenge/EZmocks/"+savefile+".dat")
     result.save_txt("../samples/mockchallenge/EZmocks/"+savefile+"_poles.dat",  ells=(0, 2, 4))
 
-
+    print("completed")
 #dir(result)
 
 

@@ -104,22 +104,22 @@ controllfile = open("mockchallenge_scripts/run_pycorr_rest.sh","w")
 controllfile.writelines("#!/bin/bash \n")
 
 for iphase in range(25):
-    if ((iphase==0)|(iphase>10)):
+    if ((iphase!=0)):
     
         phase=str(iphase).zfill(3)
 
         inputfilename="cutsky_LRG_z0.800_AbacusSummit_base_c000_ph"+phase+".fits"    
-        n_rand=5
+        #n_rand=5
 
 
-        for iredshift in range(3):
+        #for iredshift in range(3):
             
-            filename='realization'+str(phase)+'_rand'+str(n_rand)+'_'+str(redshiftrange["z_name"][iredshift],'utf-8')
+            #filename='realization'+str(phase)+'_rand'+str(n_rand)+'_'+str(redshiftrange["z_name"][iredshift],'utf-8')
             
-            scriptmaker(inputfilename,filename,n_rand,redshiftrange["zmin"][iredshift],redshiftrange["zmax"][iredshift])
+            #scriptmaker(inputfilename,filename,n_rand,redshiftrange["zmin"][iredshift],redshiftrange["zmax"][iredshift])
 
-            controllfile.writelines("sleep 5 \n")
-            controllfile.writelines("qsub pbs_mockchallenge_"+filename+".sh \n\n")
+            #controllfile.writelines("sleep 5 \n")
+            #controllfile.writelines("qsub pbs_mockchallenge_"+filename+".sh \n\n")
 
 
 

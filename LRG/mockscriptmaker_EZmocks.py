@@ -94,19 +94,29 @@ for iset in range(10):
 controllfile.close()
 
 
+controllfile = open("mockchallenge_scripts/EZmocks/run_pycorr_EZmocks20.sh","w")
+controllfile.writelines("#!/bin/bash \n")
 
-setnum="1"
-
-
-n_rand=20
-
-
-for iredshift in range(3):
-    
-    filesuf=str(redshiftrange["z_name"][iredshift],'utf-8')+"_20xRAND_"
-    scriptname=scriptmaker_EZmocks(filesuf,setnum,n_rand,redshiftrange["zmin"][iredshift],redshiftrange["zmax"][iredshift])
+for iset in range(10):
 
 
+    setnum=str(iset+1)
+
+    n_rand=20
 
 
+    for iredshift in range(3):
+        
+        filesuf=str(redshiftrange["z_name"][iredshift],'utf-8')+"_20xRAND_"
+        scriptname=scriptmaker_EZmocks(filesuf,setnum,n_rand,redshiftrange["zmin"][iredshift],redshiftrange["zmax"][iredshift])
+
+
+
+
+        controllfile.writelines("sleep 5 \n")
+        controllfile.writelines("qsub pbs_mockchallenge_"+scriptname+".sh \n\n")
+
+
+
+controllfile.close()
 

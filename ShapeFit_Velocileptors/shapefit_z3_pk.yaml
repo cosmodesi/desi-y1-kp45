@@ -1,0 +1,234 @@
+theory:
+  pk_likelihood_gc_emu_m.Taylor_pk_theory_zs:
+      zfids:
+      - 0.59
+      basedir: /global/cscratch1/sd/mmaus/ShapeFit/emulator/emu/
+      s8_filename: 
+      pk_filenames:
+      - boss_z_0.59_pkells.json
+      stop_at_error: True
+      
+likelihood:
+  pk_boss_likelihoods_emu_m.NGCZ3_Pk:
+    sf_kmins:
+    - 0.02
+    sf_mmaxs:
+    - 0.20
+    sf_qmaxs:
+    - 0.20
+    stop_at_error: True
+    
+  pk_boss_likelihoods_emu_m.SGCZ3_Pk:
+    sf_kmins:
+    - 0.02
+    sf_mmaxs:
+    - 0.20
+    sf_qmaxs:
+    - 0.20
+    stop_at_error: True
+    
+params:
+  f_sig8:
+    prior:
+      min: 0.0
+      max: 2.0
+    ref:
+      dist: norm
+      loc:  0.466
+      scale: 0.05
+    latex: f\sigma_8
+  apar:
+    prior:
+      min: 0.5
+      max: 1.5
+    ref:
+      dist: norm
+      loc: 1.0
+      scale: 0.03
+    latex: \alpha_{\parallel}
+  aperp:
+    prior:
+      min: 0.5
+      max: 1.5
+    ref:
+      dist: norm
+      loc: 1.0
+      scale: 0.03
+    latex: \alpha_{\perp}
+  m:
+    prior:
+      min: -3.0
+      max: 3.0
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.05
+    latex: m
+  
+    
+  # NGCz3
+  bsig8_NGCz3:
+    prior:
+      dist: uniform
+      min:  0.5
+      max:  3.0
+    ref:
+      dist:  norm
+      loc:   1.7239232
+      scale: 0.05
+    latex: (1+b_1^{N3})\sigma_8
+  b2_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 10.
+    ref:
+      dist:  norm
+      loc:   -2.1724898
+      scale: 0.1
+    latex: b_2^{N3}
+  bs_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 5.0
+    ref:
+      dist:  norm
+      loc:   1.0970124
+      scale: 0.1
+    latex: b_s^{N3}
+  alpha0_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 100.
+    ref:
+      dist:  norm
+      loc:   11.070999
+      scale: 0.5
+    latex: \alpha_0^{N3}
+  alpha2_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 100.
+    ref:
+      dist:  norm
+      loc:   1.4
+      scale: 0.5
+    latex: \alpha_2^{N3}
+  SN0_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 1000.
+    ref:
+      dist:  norm
+      loc:   300.91745
+      scale: 100.
+    latex: SN_0^{N3}
+  SN2_NGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 5e4
+    ref:
+      dist:  norm
+      loc:   -14851.563
+      scale:  1e3
+    latex: SN_2^{N3}
+
+  # SGCz3
+  bsig8_SGCz3:
+    prior:
+      dist: uniform
+      min:  0.5
+      max:  3.0
+    ref:
+      dist:  norm
+      loc:   1.7239232
+      scale: 0.05
+    latex: (1+b_1^{N3})\sigma_8
+  b2_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 10.
+    ref:
+      dist:  norm
+      loc:   -2.1724898
+      scale: 0.1
+    latex: b_2^{N3}
+  bs_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 5.0
+    ref:
+      dist:  norm
+      loc:   1.0970124
+      scale: 0.1
+    latex: b_s^{N3}
+  alpha0_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 100.
+    ref:
+      dist:  norm
+      loc:   11.070999
+      scale: 0.5
+    latex: \alpha_0^{N3}
+  alpha2_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 100.
+    ref:
+      dist:  norm
+      loc:   1.4
+      scale: 0.5
+    latex: \alpha_2^{N3}
+  SN0_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 1000.
+    ref:
+      dist:  norm
+      loc:   300.91745
+      scale: 100.
+    latex: SN_0^{N3}
+  SN2_SGCz3:
+    prior:
+      dist:  norm
+      loc:   0.0
+      scale: 5e4
+    ref:
+      dist:  norm
+      loc:   -14851.563
+      scale:  1e3
+    latex: SN_2^{N3}
+
+sampler:
+  mcmc:
+    covmat: auto
+#    covmat: /global/cscratch1/sd/sfschen/boss_analysis_joint/covini/bossz3_pk.covini
+    learn_proposal: True
+    learn_proposal_Rminus1_max: 130.0
+    output_every: 60s
+    measure_speeds: False
+    max_tries: 500
+    drag: False
+    oversample_power: 0.4
+    proposal_scale: 1.5
+    Rminus1_stop: 0.01
+    blocking:
+      - [ 1, [f_sig8,apar,aperp,m]]
+      - [ 2, [bsig8_NGCz3,b2_NGCz3,bs_NGCz3,alpha0_NGCz3,alpha2_NGCz3,SN0_NGCz3,SN2_NGCz3,]]
+      - [3, [bsig8_SGCz3,b2_SGCz3,bs_SGCz3,alpha0_SGCz3,alpha2_SGCz3,SN0_SGCz3,SN2_SGCz3,]]
+output: chains/z3/Joint/run1/z3_pk
+debug: True
+debug_file: chains/z3/Joint/run1/z3_pk
+timing: True
+stop_on_error: True

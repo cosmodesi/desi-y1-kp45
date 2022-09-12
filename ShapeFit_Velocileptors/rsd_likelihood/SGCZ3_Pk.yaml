@@ -1,0 +1,22 @@
+zfid:     0.59
+
+fs_sample_names:
+- SGCz3
+
+# The file paths below assume the chain/code will be
+# running in the directory where the BOSSxPlanck repo
+# has been cloned.  Otherwise, override these with the
+# full path.
+
+basedir: /global/cscratch1/sd/mmaus/ShapeFit/
+
+fs_datfns: 
+- rsd_data/pk/pk_SGC_z3.dat
+
+covfn: rsd_data/covariances/cov_SGC_z3_n1000.dat
+
+fs_matMfns: 
+- rsd_data/matrices/M_BOSS_DR12_SGC_z3_V6C_1_1_1_1_1_1200_2000.matrix.gz
+
+fs_matWfns: 
+- rsd_data/matrices/W_BOSS_DR12_SGC_z3_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix.gz

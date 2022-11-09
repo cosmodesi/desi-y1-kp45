@@ -23,7 +23,7 @@ echo "Setup done.  Starting to run code ..."
 #
 # Now run the code -- we do Preal and Phalofit here.
 #
-srun -n 32 -c 2 --unbuffered python make_emulator_pells.py  $PWD 0.59 0.31
+srun -n 32 -c 2 --unbuffered python make_emulator_pells.py  $PWD 0.59 0.6766
 
 #
 date

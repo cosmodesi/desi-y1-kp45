@@ -5,15 +5,17 @@ This is a ShapeFit emulator of velocileptors, based on a Taylor series (to 3rd o
 
 The emulator supports mpi, and can be created using:
 
-srun -n X -c Y python make_emulator_pells.py
+srun -n X -c Y python make_emulator_pells.py <z> <h>
+
+where the user must input the redshift and hubble's constant of the template cosmology.
 
 The taylor series is then stored in
 
-/emu/shapefit_z_X.XX_Om_Y.YY_pkells.json.
+/emu/shapefit_z_X.XX_h_Y.YY_pkells.json.
 
 In order to run the emulator one simply enters:
 
-emu = Emulator_Pells('emu/shapefit_z_%.2f_Om_%.2f_pkells.json'%(z,Omfid),order=4) kvec, p0, p2, p4 = emu(cpars, bpars)
+emu = Emulator_Pells('emu/shapefit_z_%.2f_h_%.2f_pkells.json'%(z,h),order=4) kvec, p0, p2, p4 = emu(cpars, bpars)
 
 cpars are the shapefit parameters and bpars are the bias terms.
 

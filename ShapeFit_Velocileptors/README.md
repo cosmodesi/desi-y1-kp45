@@ -15,7 +15,7 @@ The taylor series is then stored in
 
 In order to run the emulator one simply enters:
 
-emu = Emulator_Pells('emu/shapefit_z_%.2f_h_%.2f_pkells.json'%(z,h),order=4) kvec, p0, p2, p4 = emu(cpars, bpars)
+emu = Emulator_Pells('emu/boss_z_%.2f_pkells.json'%(z),order=4) kvec, p0, p2, p4 = emu(cpars, bpars)
 
 cpars are the shapefit parameters and bpars are the bias terms.
 

@@ -11,7 +11,7 @@ where the user must input the redshift and hubble's constant of the template cos
 
 The taylor series is then stored in
 
-/emu/shapefit_z_X.XX_h_Y.YY_pkells.json.
+/emu/boss_z_X.XX_pkells.json.
 
 In order to run the emulator one simply enters:
 

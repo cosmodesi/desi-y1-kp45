@@ -20,10 +20,10 @@ if mpi_rank==0:
 
 basedir = sys.argv[1] +'/'
 z = float(sys.argv[2])
-Omfid = float(sys.argv[3])
+h = float(sys.argv[3])
 
 # Compute fiducial distances
-fid_dists = compute_fid_dists(z,Omfid)
+# fid_dists = compute_fid_dists(z,Omfid)
 
 #Create template pkclass:
 pkclass = make_pkclass(z)
@@ -64,7 +64,7 @@ for nn, iis in enumerate(zip(*Inds)):
     if nn%mpi_size == mpi_rank:
         coord = [Coords[i][iis] for i in range(Nparams)]
         print(coord,iis)
-        p0, p2, p4 = compute_pell_tables(coord,pkclass,z=z,fid_dists=fid_dists)
+        p0, p2, p4 = compute_pell_tables(coord,pkclass,z=z,h=h,fid_dists=fid_dists)
         
         P0gridii[iis] = p0
         P2gridii[iis] = p2

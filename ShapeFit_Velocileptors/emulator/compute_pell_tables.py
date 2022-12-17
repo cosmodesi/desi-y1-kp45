@@ -10,37 +10,8 @@ kvec = np.concatenate( ([0.0005,],\
                         np.logspace(np.log10(0.0015),np.log10(0.025),10, endpoint=True),\
                         np.arange(0.03,0.51,0.01)) )
 
-# Reference Cosmology:
-# z = 0.61
-Omega_M = 0.31
-fb = 0.1571
-h = 0.6766
-ns = 0.9665
-speed_of_light = 2.99792458e5
 
-
-pkparams = {
-    'output': 'mPk',
-    'P_k_max_h/Mpc': 20.,
-    'z_pk': '0.0,10',
-    'A_s': np.exp(3.040)*1e-10,
-    'n_s': 0.9665,
-    'h': h,
-    'N_ur': 3.046,
-    'N_ncdm': 0,#1,
-    #'m_ncdm': 0,
-    'tau_reio': 0.0568,
-    'omega_b': h**2 * fb * Omega_M,
-    'omega_cdm': h**2 * (1-fb) * Omega_M}
-
-import time
-t1 = time.time()
-pkclass = Class()
-pkclass.set(pkparams)
-pkclass.compute()
-
-
-def compute_pell_tables(pars,pkclass, z=0.59,fid_dists= None, ap_off=False ):
+def compute_pell_tables(pars,pkclass,z ,h ,fid_dists= None, ap_off=False ):
     
     # OmegaM, h, sigma8 = pars
     Hzfid, chizfid = fid_dists

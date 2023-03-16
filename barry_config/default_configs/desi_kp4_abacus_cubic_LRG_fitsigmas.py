@@ -89,7 +89,7 @@ if __name__ == "__main__":
                     fix_params=["om", "alpha", "epsilon"],
                     poly_poles=dataset_xi.fit_poles,
                     correction=Correction.NONE,
-                    n_poly=4,    # 3 polynomial terms for Xi(s)
+                    n_poly=4,    # 4 polynomial terms for Xi(s)
                 )
 
                 pktemplate = np.loadtxt("../prepare_data/DESI_Pk_template.dat")
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # this means running independent chains which will then get added together when they are loaded in.
     fitter.set_sampler(sampler)
     fitter.set_num_walkers(1)
-    #fitter.fit(file)
+    fitter.fit(file)
     
     # If this is being run for the first time (i.e., not via a submission script), dump the entire fitter class to a file
     # so we can use it to read in the chains/models/datasets for plotting in a jupyter notebook

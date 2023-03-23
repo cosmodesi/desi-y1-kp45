@@ -25,8 +25,8 @@ if __name__ == "__main__":
 
     # Loop over the mocktypes
     allnames = []
-    mocknames = ['desi_kp4_abacus_cubicbox_pk_lrg.pkl', 'desi_kp4_abacus_cubicbox_cv_pk_lrg.pkl',
-                 'desi_kp4_abacus_cubicbox_xi_lrg.pkl', 'desi_kp4_abacus_cubicbox_cv_xi_lrg.pkl']
+    mocknames = ['desi_kp4_abacus_cubicbox_pk_elg.pkl', 'desi_kp4_abacus_cubicbox_cv_pk_elg.pkl',
+                 'desi_kp4_abacus_cubicbox_xi_elg.pkl', 'desi_kp4_abacus_cubicbox_cv_xi_elg.pkl']
     for i, mockname in enumerate(mocknames):
 
         # Loop over pre- and post-recon power spectrum measurements

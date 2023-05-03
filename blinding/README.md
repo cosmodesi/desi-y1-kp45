@@ -9,13 +9,13 @@ This is a tentative repo to gather scripts for BAO & full-shape fits of the blin
 - `nb:` postprocess and plots.
 - `scripts:` Bash scripts to automate BAO and full-shape fits for all tracer and blinded cosmology catalogs.
 
-## Usage (TODO)
+## Usage
 ```bash
 # BAO fits
-./scripts/bao_fit_blinded.sh
+./bao_fit_blinded.sh
 
 # Full-shape fits
-./scripts/fs_fit_blinded.sh
+.fs_fit_blinded.sh
 ```
 
 ## Contact

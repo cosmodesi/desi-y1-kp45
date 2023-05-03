@@ -1,22 +1,13 @@
 #standard python
-'''
+"""
 Created by Uendert Andrade, 13 Fev 2023.
 
-EXAMPLE USE
-===========
+Example
+-------
 
 ```python py/bao_fs_fit.py --type LRG --survey main --basedir_out test_w0-0.9040043101843285_wa0.025634205416364297 --verspec mocks/FirstGenMocks/AbacusSummit/Y1/mock1 --version '' --region NScomb --blind_cosmology test_w0-0.9040043101843285_wa0.025634205416364297 --covmat_pk pk_xi_measurements/CovPk --blinded_index 1 --covmat_xi AbacusSummit/CutSky/Y1-blinding/```
+"""
 
-
-GENERAL NOTES
-=============
--
--
-
-NOTES FOR TESTING AND VALIDATION
-================================
-
-'''
 import os
 
 import numpy as np
@@ -39,14 +30,10 @@ scratch_dir = os.environ['SCRATCH']
 
 
 def parse_args():
-    '''This function parses command line arguments for the bao_fit executable and returns them as an
-    argparse.Namespace object.
-    
-    Returns
-    -------
-        The function `parse_args()` returns the command line arguments as an `argparse.Namespace` object.
-    
-    '''
+    """
+    This function parses command line arguments for the bao_fit executable and returns them as an
+    :class:`argparse.Namespace` object.
+    """
     import argparse
 
     description = 'Script code for fitting BAO in blinded power spectrum measurements.\n'
@@ -112,27 +99,27 @@ def parse_args():
 
 
 def cut_matrix(cov, xcov, ellscov, xlim):
-    '''The function cuts a matrix based on specified indices and returns the resulting submatrix.
+    '''
+    The function cuts a matrix based on specified indices and returns the resulting submatrix.
     
     Parameters
     ----------
-    cov
-        a square matrix representing the covariance matrix
-    xcov
-        It is a 1D array containing the values of the x-axis for a 2D matrix.
-    ellscov
-        A list of values representing the ell values in a covariance matrix.
-    xlim
-        `xlim` is a dictionary where the keys are values of `ell` and the values are tuples of two floats
-    representing the lower and upper limits of `xcov` for that `ell` value.
+    cov : 2D array
+        A square matrix representing the covariance matrix.
+    xcov : 1D array
+        x-coordinates in the covariance matrix.
+    ellscov : list
+        Multipoles in the covariance matrix.
+    xlim : tuple
+        `xlim` is a dictionary where the keys are `ell` and the values are tuples of two floats
+        representing the lower and upper limits of `xcov` for that `ell` value to be returned.
     
     Returns
     -------
-        The function `cut_matrix` returns a subset of the input matrix `cov`, based on the values of `xcov`
-    and `xlim`. The subset is determined by selecting rows and columns of `cov` corresponding to the
-    values of `ell` and `xcov` that fall within the specified `xlim` range. The returned matrix is a
-    numpy array.
-    
+    cov : array
+        Subset of the input matrix `cov`, based on `xlim`.
+        The subset is determined by selecting rows and columns of `cov` corresponding to the
+        values of `ell` and `xcov` that fall within the specified `xlim` range.
     '''
     assert len(cov) == len(xcov) * len(ellscov), 'Input matrix has size {}, different than {} x {}'.format(len(cov), len(xcov), len(ellscov))
     indices = []
@@ -145,36 +132,31 @@ def cut_matrix(cov, xcov, ellscov, xlim):
 
 
 def get_footprint(tracer, region, zmin, zmax, completeness='', cosmo=None):
-    '''This function selects a region and concatenates data and random catalogs, renormalizing random
+    """
+    This function selects a region and concatenates data and random catalogs, renormalizing random
     weights before concatenation.
     
     Parameters
     ----------
-    tracer
-        The tracer is a catalog of galaxies or quasars that will be used to measure the large-scale
-    structure of the universe.
-    region
-        The region parameter specifies the region of the sky to consider for the analysis. It can be either
-    "NGC" for the Northern Galactic Cap or "SGC" for the Southern Galactic Cap.
-    zmin
-        The minimum redshift of the selected galaxies in the catalog.
-    zmax
-        zmax is the maximum redshift value for selecting galaxies from a catalog. Only galaxies with
-    redshifts less than or equal to zmax will be selected.
-    completeness
-        The completeness parameter is an optional input that specifies the completeness of the catalog. It
-    is used to weight the galaxies in the catalog according to their completeness level. If not
-    specified, the galaxies are assumed to be uniformly weighted.
-    cosmo
-        cosmo is a parameter that specifies the cosmology to be used in the calculations. It is an optional
-    parameter and if not provided, the default cosmology will be used.
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
+    region : str
+        "NGC" for the North Galactic Cap or "SGC" for the South Galactic Cap.
+    zmin : float
+        Selected galaxies with redshift greater than ``zmin``.
+    zmax : float
+        Selected galaxies with redshift less than ``zmax``.
+    completeness : str, default=''
+        'complete_' to select complete catalogs (without fiber assignment).
+    cosmo : Cosmoprimo.Cosmology, default=None
+        Cosmology for the redshift to distance relation.
+        Defaults to :class:`cosmoprimo.fiducial.DESI`.
     
     Returns
     -------
-        The function is not returning anything, it is defining two helper functions (`select_region` and
-    `concatenate`) and using them to manipulate catalogs and concatenate them.
-    
-    '''
+    footprint : desilike.observables.galaxy_clustering.CutskyFootprint
+        A footprint instance, containing everything needed to compute effective volume and redshift for approximate covariance calculation.
+    """
     import healpy as hp
     import mpytools as mpy
     from mockfactory import Catalog, RedshiftDensityInterpolator
@@ -259,21 +241,21 @@ def read_xi(tracer, region, zmin, zmax, plot=False):
 
 
 def get_blind_cosmo(z, tracer, *args, **kwargs):
-    '''This function returns a dictionary of cosmological parameters with blinded parameters if specified.
+    """
+    This function returns a dictionary of cosmological parameters with blinded parameters if specified.
     
     Parameters
     ----------
-    z
-        redshift at which to evaluate the cosmology
-    tracer
-        The tracer is a variable that specifies which type of galaxy or object is being used to measure
-    cosmological parameters. It could be, for example, Luminous Red Galaxies (LRGs) or Quasars.
+    z : float
+        Redshift at which to evaluate `qpar`, `qper`, `df`.
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
     
     Returns
     -------
+    cosmo : dict
         A dictionary containing the values of `qpar`, `qper`, `df`, and `dm`.
-    
-    '''
+    """
     blinded = 'unblinded' not in in_dir
 
     # Template cosmology for the BAO fits
@@ -295,50 +277,40 @@ def get_blind_cosmo(z, tracer, *args, **kwargs):
     return dict(qpar=qpar, qper=qper, df=df, dm=0.)
 
 
-def fit_pk(out_dir, tracer, region, debug=False, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
-    '''This function performs a power spectrum fit for a given tracer and region, using a specified theory
-    and covariance matrix, and saves the resulting profiles and chains.
+def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
+    """
+    This function performs a power spectrum fit for a given tracer and region, using a specified theory
+    and covariance matrix, and saves the resulting profiles and / or chains.
     
     Parameters
     ----------
-    out_dir
+    out_dir : str
         The directory where the output files will be saved.
-    tracer
-        The type of tracer being used, such as LRG, ELG, or QSO.
-    region
-        The region of the sky being analyzed, such as 'NGC' or 'SGC'.
-    debug, optional
-        debug is a boolean parameter that determines whether or not to print debug information during the
-    execution of the function. If set to True, additional information will be printed to the console to
-    aid in debugging. If set to False, only essential information will be printed.
-    covmat_params
-        A dictionary or path to directory containing parameters for the covariance matrix used in the fit.
-    If None, a preliminary fit will be run to compute a more accurate covariance matrix.
-    covmat_pk
-        The path to the directory containing the Pk covariance matrix files.
-    wmat_pk
-        The path to the directory where the wide-angle-resumed matrix is saved.
-    blinded_index
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
+    region : str
+        "NGC" for the North Galactic Cap or "SGC" for the South Galactic Cap.
+    covmat_params : dict, str, default=None
+        A dictionary or path to directory containing theory parameters to estimate the covariance matrix used in the final fit.
+        If ``None``, and ``covmat_pk`` is not provided, a preliminary fit will be run to compute a more accurate covariance matrix.
+    covmat_pk : str, default=None
+        Optionally, the path to the directory containing the pk covariance matrix files.
+    wmat_pk : str, default=None
+        The path to the directory where the window function is saved.
+    blinded_index : int, default=None
         The index of the blinded parameter, where 0 indicates an unblinded parameter.
-    theory_name, optional
-        A string indicating which theoretical model to use for the power spectrum calculation. It can be
-    either 'bao', 'fs', or 'velocileptors'.
-    save_emulator, optional
-        A boolean flag indicating whether to save the emulator used for the power spectrum calculation. If
-    True, the emulator will be saved to a file specified by the emulator_fn parameter. If False, no
-    emulator will be saved.
-    emulator_fn, optional
-        The filename to save or load the power spectrum emulator. If set to None, no emulator will be used.
-    template_name, optional
-        The name of the power spectrum template to use for the fit. It can be either 'shapefit' or
-    'direct'.
-    todo, optional
-        The `todo` parameter is a string that specifies what tasks to perform. It can contain the values
-    "profiling" and/or "sampling", which indicate whether to run a profiling step or a sampling step,
-    respectively.
-    
-    '''
-
+    theory_name : str, default='bao'
+        Which theoretical model to use for the power spectrum calculation. It can be either 'bao', 'fs', or 'velocileptors'.
+    save_emulator : bool, default=False
+        If used, compute and save the emulator used for the power spectrum theory to a file specified by the emulator_fn parameter.
+        If ``False``, no emulator will be saved.
+    emulator_fn : str, default='power_emulator_{}.npy'
+        The filename to save or load the power spectrum emulator. If set to ``None``, no emulator will be used.
+    template_name : str, default='shapefit'
+        The name of the power spectrum template to use for the fit. It can be either 'bao', 'shapefit', 'direct'.
+    todo : str, default='profiling'
+        Specifies which tasks to perform. It can contain the values "profiling" and/or "sampling", which indicate whether to run posterior profiling or sampling, respectively.
+    """
     fiducial = DESI()
     zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
@@ -448,9 +420,6 @@ def fit_pk(out_dir, tracer, region, debug=False, covmat_params=None, covmat_pk=N
     elif emulator_fn is not None:
         theory.init.update(pt=EmulatedCalculator.load(emulator_fn))
 
-    #for param in theory.params.select(basename=solved_params):
-    #    param.update(prior=None, derived='.auto')
-    #    if debug: param.update(value=0., fixed=True)
     for param in fixed_params:
         likelihood.all_params[param].update(fixed=True, value=fixed_params[param])
     for param in expected:
@@ -459,18 +428,7 @@ def fit_pk(out_dir, tracer, region, debug=False, covmat_params=None, covmat_pk=N
     from desilike.profilers import MinuitProfiler
 
     def save_profiles(profiles, base=''):
-        '''This function saves profiles and associated statistics and plots based on input parameters.
-        
-        Parameters
-        ----------
-        profiles
-            The profiles parameter is likely an object or data structure that contains information about some
-        physical system or model. It is being passed as an argument to the save_profiles function.
-        base
-            The base name for the output files that will be saved. It is an optional parameter and if not
-        provided, it will be an empty string.
-        
-        '''
+        """This function saves profiles and generates plots and summary statistics."""
         likelihood(**profiles.bestfit.choice(input=True))
         if likelihood.mpicomm.rank == 0:
             observable = likelihood.observables[0]
@@ -483,18 +441,7 @@ def fit_pk(out_dir, tracer, region, debug=False, covmat_params=None, covmat_pk=N
             print(profiles.to_stats(tablefmt='pretty'))
 
     def save_chains(chains, base=''):
-        '''This function saves chains and generates plots and statistics for the given observables.
-        
-        Parameters
-        ----------
-        chains
-            The chains parameter is a list of MCMC chains that have been generated by some sampling algorithm.
-        Each chain is an instance of the Chain class from the desilike.samples module.
-        base
-            The base name for the output files. It is an optional parameter and its default value is an empty
-        string.
-        
-        '''
+        """This function saves chains and generates plots and summary statistics."""
         from desilike.samples import Chain
         if likelihood.mpicomm.rank == 0:
             chain = Chain.concatenate([chain.remove_burnin(0.5)[::10] for chain in chains])
@@ -539,47 +486,36 @@ def fit_pk(out_dir, tracer, region, debug=False, covmat_params=None, covmat_pk=N
         save_chains(sampler.chains, base='')
 
 
-def fit_xi(out_dir, tracer, region, debug=False, covmat_params=None, covmat_xi=None, theory_name='bao', save_emulator=False, emulator_fn='corr_emulator_{}.npy', pk_emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
-    '''This function fits the correlation function multipoles of a given tracer in a given redshift range,
-    using a theoretical model and a covariance matrix, and saves the resulting profiles and chains.
+def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_name='bao', save_emulator=False, emulator_fn='corr_emulator_{}.npy', pk_emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
+    """
+    This function performs a correlation function fit for a given tracer and region, using a specified theory
+    and covariance matrix, and saves the resulting profiles and / or chains.
     
     Parameters
     ----------
-    out_dir
+    out_dir : str
         The directory where the output files will be saved.
-    tracer
-        The type of tracer being used, such as 'LRG', 'ELG', or 'QSO'.
-    region
-        The region of the survey being analyzed.
-    debug, optional
-        A boolean flag indicating whether to run the code in debug mode or not. If set to True, some
-    parameters will be fixed to zero and the code will run faster, but the results may not be accurate.
-    covmat_params
-        A dictionary containing parameters to be used in the covariance matrix calculation. If None, a
-    preliminary fit will be run to compute a more accurate covariance matrix. If a path to a directory
-    is provided, the profiles will be loaded from there. If a dictionary is provided, it will be used
-    directly in the
-    covmat_xi
-        The path to the directory where the xi covariance matrix is stored.
-    theory_name, optional
-        The name of the theoretical model used for the fit, either 'bao', 'fs', or 'velocileptors'.
-    save_emulator, optional
-        A boolean flag indicating whether to save the emulator used for the likelihood calculation. If
-    True, the emulator will be saved to a file specified by the emulator_fn parameter.
-    emulator_fn, optional
-        The filename of the emulator to be saved or loaded. It is formatted with the theory_name variable.
-    pk_emulator_fn, optional
-        The filename of the power spectrum emulator to load or save.
-    template_name, optional
-        The name of the power spectrum template to use, either "shapefit" or "direct".
-    todo, optional
-        The `todo` parameter is a string that specifies what actions to perform during the fitting process.
-    It can contain the values "profiling" and/or "sampling", which respectively correspond to running a
-    profiling step to find the maximum likelihood parameters and running a sampling step to generate
-    posterior samples.
-    
-    '''
-
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
+    region : str
+        "NGC" for the North Galactic Cap or "SGC" for the South Galactic Cap.
+    covmat_params : dict, str, default=None
+        A dictionary or path to directory containing theory parameters to estimate the covariance matrix used in the final fit.
+        If ``None``, and ``covmat_pk`` is not provided, a preliminary fit will be run to compute a more accurate covariance matrix.
+    covmat_xi : str, default=None
+        Optionally, the path to the directory containing the xi covariance matrix files.
+    theory_name : str, default='bao'
+        Which theoretical model to use for the power spectrum calculation. It can be either 'bao', 'fs', or 'velocileptors'.
+    save_emulator : bool, default=False
+        If used, compute and save the emulator used for the power spectrum theory to a file specified by the emulator_fn parameter.
+        If ``False``, no emulator will be saved.
+    emulator_fn : str, default='power_emulator_{}.npy'
+        The filename to save or load the power spectrum emulator. If set to ``None``, no emulator will be used.
+    template_name : str, default='shapefit'
+        The name of the power spectrum template to use for the fit. It can be either 'bao', 'shapefit', 'direct'.
+    todo : str, default='profiling'
+        Specifies which tasks to perform. It can contain the values "profiling" and/or "sampling", which indicate whether to run posterior profiling or sampling, respectively.
+    """
     fiducial = DESI()
     zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
@@ -661,9 +597,6 @@ def fit_xi(out_dir, tracer, region, debug=False, covmat_params=None, covmat_xi=N
     elif emulator_fn is not None:
         theory.init.update(pt=EmulatedCalculator.load(emulator_fn))
 
-    #for param in likelihood.all_params.select(basename=solved_params):
-    #    param.update(prior=None, derived='.auto')
-    #    if debug: param.update(value=0., fixed=True)
     for param in fixed_params:
         likelihood.all_params[param].update(fixed=True, value=fixed_params[param])
     for param in expected:
@@ -709,7 +642,6 @@ def fit_xi(out_dir, tracer, region, debug=False, covmat_params=None, covmat_xi=N
         likelihood_pk = ObservablesGaussianLikelihood(observables=[observable_pk], covariance=covariance_pk(**covmat_params) if covmat is None else covmat)
         for param in likelihood_pk.all_params.select(basename=solved_params):
             param.update(prior=None, derived='.auto')
-            if debug: param.update(value=0., fixed=True)
         for param in fixed_params:
             likelihood_pk.all_params[param].update(fixed=True, value=fixed_params[param])
         for param in expected:
@@ -742,7 +674,7 @@ def fit_xi(out_dir, tracer, region, debug=False, covmat_params=None, covmat_xi=N
         save_chains(sampler.chains, base='')
 
 
-# The snippet code is setting up directories and file paths for a BAO (Baryon Acoustic Oscillations) fit
+# Setting up directories and file paths for a BAO and RSD fit
 # pipeline for a specific tracer type. It checks if the input version and survey are supported, and
 # sets up the necessary directories for catalogs, data, and output. It also sets up file paths for
 # covariance matrices and a weight matrix.
@@ -777,7 +709,7 @@ if __name__ == '__main__':
     wmat_pk = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', 'unblinded', 'pk', 'pk')
 
     # The code is checking for certain input arguments and then running a fit pipeline for Fourier
-    # space and Configuration space for a given tracer type. It loads covariance matrices and
+    # space and configuration space for a given tracer type. It loads covariance matrices and
     # parameters from disk if specified, and saves the results of the fit if specified.
     ############################################## Run functions ##############################################
     if args.fixed_covariance and (args.covmat_pk or args.covmat_xi):

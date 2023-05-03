@@ -12,13 +12,10 @@ This is a tentative repo to gather scripts for BAO & full-shape fits of the blin
 ## Usage (TODO)
 ```bash
 # BAO fits
-./scripts/bao.sh
+./scripts/bao_fit_blinded.sh
 
 # Full-shape fits
-./scripts/fs.sh
-
-# Postprocess and plots
-./scripts/postprocess.sh
+./scripts/fs_fit_blinded.sh
 ```
 
 ## Contact

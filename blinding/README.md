@@ -5,18 +5,25 @@ This is a tentative repo to gather scripts for BAO & full-shape fits of the blin
 ## Directories
 
 - `py:` Python scripts for BAO and FS fits.
-- `blinded/test_w0-0.9040043101843285_wa-0.025634205416364297:` Results from blined catalogue with `w0_blined=0.9040043101843285` and `wa_blinded=0.025634205416364297`.
 - `nb:` postprocess and plots.
-- `scripts:` Bash scripts to automate BAO and full-shape fits for all tracer and blinded cosmology catalogs.
+- `.:` Bash scripts to automate BAO and full-shape fits for all tracer and blinded cosmology catalogs.
 
 ## Usage
 ```bash
 # BAO fits
 ./bao_fit_blinded.sh
+## Additonaly, run the following to run BAO fits fixing the covariance to unblinded cosmology.
+./bao_fit_fixed_CovMatrix_to_unblinded.sh
 
 # Full-shape fits
-.fs_fit_blinded.sh
+./fs_fit_blinded.sh
+
+# Postprocess and plots
+nb/plot_bao.ipynb
+nb/plot_fs.ipynb
 ```
+
+NB.: Curretly, there is no `configuration space covariance` for each specific blinded catalogs. The covariance matrix is the same for all catalogs; generaded with unblinded catalog information. Once the configuration space covariance for each blinded cosmology is available, the BAO and full-shape fits can be easly updated to include it.
 
 ## Contact
 Contacts: Uendert Andrade (uendsa@umich.edu), and Arnaud de Mattia (arnaud.de-mattia@cea.fr).

@@ -73,9 +73,6 @@ def parse_args():
         help='directory with blind cosmology and catalogs',
         default='unblinded')
     parser.add_argument(
-        '--debug', action='store_true',
-        help='whether to choose less parameters to speed up calculation for debugging')
-    parser.add_argument(
         '--preli_fit_load', action='store_true',
         help='whether to perform preliminary BAO fit or load it from disk')
     parser.add_argument(
@@ -743,7 +740,7 @@ if __name__ == '__main__':
         if 'emulator' in args.todo: kwargs['save_emulator'] = True
         kwargs['todo'] = args.todo
         print('\n-->  Running *Fourier space* fit pipeline for tracer type {}\n'.format(args.type))
-        fit_pk(os.path.join(out_dir, 'pk'), args.type, args.region, debug=args.debug, covmat_params=os.path.join(covmat_params, 'bao', 'pk') if covmat_params is not None else None, covmat_pk=covmat_pk, wmat_pk=wmat_pk, blinded_index=blinded_index, **kwargs)
+        fit_pk(os.path.join(out_dir, 'pk'), args.type, args.region, covmat_params=os.path.join(covmat_params, 'bao', 'pk') if covmat_params is not None else None, covmat_pk=covmat_pk, wmat_pk=wmat_pk, blinded_index=blinded_index, **kwargs)
 
         print('\n-->  Running *Configuration space* fit pipeline for tracer type {}\n'.format(args.type))
-        fit_xi(os.path.join(out_dir, 'xi'), args.type, args.region, debug=args.debug, covmat_params=os.path.join(covmat_params, 'bao', 'xi',) if covmat_params is not None else None, covmat_xi=covmat_xi, **kwargs)
+        fit_xi(os.path.join(out_dir, 'xi'), args.type, args.region, covmat_params=os.path.join(covmat_params, 'bao', 'xi',) if covmat_params is not None else None, covmat_xi=covmat_xi, **kwargs)

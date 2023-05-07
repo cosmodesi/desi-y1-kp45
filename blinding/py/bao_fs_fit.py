@@ -98,7 +98,7 @@ def parse_args():
 def cut_matrix(cov, xcov, ellscov, xlim):
     '''
     The function cuts a matrix based on specified indices and returns the resulting submatrix.
-    
+
     Parameters
     ----------
     cov : 2D array
@@ -110,7 +110,7 @@ def cut_matrix(cov, xcov, ellscov, xlim):
     xlim : tuple
         `xlim` is a dictionary where the keys are `ell` and the values are tuples of two floats
         representing the lower and upper limits of `xcov` for that `ell` value to be returned.
-    
+
     Returns
     -------
     cov : array
@@ -128,11 +128,11 @@ def cut_matrix(cov, xcov, ellscov, xlim):
     return cov[np.ix_(indices, indices)]
 
 
-def get_footprint(tracer, region, zmin, zmax, completeness='', cosmo=None):
+def get_footprint(tracer, region, zmin, zmax, completeness=''):
     """
     This function selects a region and concatenates data and random catalogs, renormalizing random
     weights before concatenation.
-    
+
     Parameters
     ----------
     tracer : str
@@ -148,7 +148,7 @@ def get_footprint(tracer, region, zmin, zmax, completeness='', cosmo=None):
     cosmo : Cosmoprimo.Cosmology, default=None
         Cosmology for the redshift to distance relation.
         Defaults to :class:`cosmoprimo.fiducial.DESI`.
-    
+
     Returns
     -------
     footprint : desilike.observables.galaxy_clustering.CutskyFootprint
@@ -158,6 +158,8 @@ def get_footprint(tracer, region, zmin, zmax, completeness='', cosmo=None):
     import mpytools as mpy
     from mockfactory import Catalog, RedshiftDensityInterpolator
     from desilike.observables.galaxy_clustering import CutskyFootprint
+
+    cosmo = DESI()
 
     def select_region(catalog, region):
         '''This function selects a region of the sky and returns the catalog of galaxies in that region.'''
@@ -240,14 +242,14 @@ def read_xi(tracer, region, zmin, zmax, plot=False):
 def get_blind_cosmo(z, tracer, *args, **kwargs):
     """
     This function returns a dictionary of cosmological parameters with blinded parameters if specified.
-    
+
     Parameters
     ----------
     z : float
         Redshift at which to evaluate `qpar`, `qper`, `df`.
     tracer : str
         The tracer ("LRG", "ELG", or "QSO").
-    
+
     Returns
     -------
     cosmo : dict
@@ -278,7 +280,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     """
     This function performs a power spectrum fit for a given tracer and region, using a specified theory
     and covariance matrix, and saves the resulting profiles and / or chains.
-    
+
     Parameters
     ----------
     out_dir : str
@@ -312,7 +314,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
-    
+
     if emulator_fn is not None:
         emulator_fn = emulator_fn.format(theory_name)
 
@@ -336,6 +338,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         solved_params = ['alpha*', 'sn*']
     else:
         raise ValueError('Unknown theory {}'.format(theory_name))
+    expected = {name: value for name, value in expected.items() if name in template.params}
 
     run_preliminary = covmat_params is None and covmat_pk is None
     covmat = None
@@ -377,12 +380,12 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         else:
             window = PowerSpectrumSmoothWindow.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin.npy'.format(region, zmin, zmax)))
             kout = data.k
-            ellsout = [0, 2, 4] # output multipoles
-            ellsin = [0, 2, 4] # input (theory) multipoles
-            wa_orders = 1 # wide-angle order
-            sep = np.geomspace(1e-4, 1e4, 1024*16) # configuration space separation for FFTlog
-            kin_rebin = 4 # rebin input theory to save memory
-            kin_lim = (0, 1.) # pre-cut input (theory) ks to save some memory
+            ellsout = [0, 2, 4]  # output multipoles
+            ellsin = [0, 2, 4]  # input (theory) multipoles
+            wa_orders = 1  # wide-angle order
+            sep = np.geomspace(1e-4, 1e4, 1024 * 16)  # configuration space separation for FFTlog
+            kin_rebin = 4  # rebin input theory to save memory
+            kin_lim = (0, 1.)  # pre-cut input (theory) ks to save some memory
             # Input projections for window function matrix:
             # theory multipoles at wa_order = 0, and wide-angle terms at wa_order = 1
             projsin = ellsin + PowerSpectrumOddWideAngleMatrix.propose_out(ellsin, wa_orders=wa_orders)
@@ -460,7 +463,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         profiler = MinuitProfiler(likelihood, seed=42)
         profiles = profiler.maximize(niterations=3)
         covmat_params.update(profiles.bestfit.choice(index='argmax', varied=True))
-        save(profiles, base='preliminary-')
+        save_profiles(profiles, base='preliminary-')
 
     # Final fit with newcovariance matrix
     likelihood.init.update(covariance=covariance(**covmat_params) if covmat is None else covmat)
@@ -487,7 +490,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
     """
     This function performs a correlation function fit for a given tracer and region, using a specified theory
     and covariance matrix, and saves the resulting profiles and / or chains.
-    
+
     Parameters
     ----------
     out_dir : str
@@ -517,7 +520,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
     zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
-    
+
     if emulator_fn is not None:
         emulator_fn = emulator_fn.format(theory_name)
 
@@ -543,6 +546,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         solved_params = ['alpha*']
     else:
         raise ValueError('Unknown theory {}'.format(theory_name))
+    expected = {name: value for name, value in expected.items() if name in template.params}
 
     run_preliminary = covmat_params is None and covmat_xi is None
     covmat = None
@@ -576,8 +580,17 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
                                                                theory=theory)
     if covmat is None:
         footprint = get_footprint(tracer, 'NS' if region == 'NScomb' else region, zmin, zmax, **kwargs)
-        klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005], 4: [0.02, 0.30, 0.005]}
-        theory_pk = LPTVelocileptorsTracerPowerSpectrumMultipoles(pt=EmulatedCalculator.load(pk_emulator_fn))
+        if theory_name == 'bao':
+            klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005]}
+            theory_pk = DampedBAOWigglesTracerPowerSpectrumMultipoles(template=BAOPowerSpectrumTemplate(z=z, fiducial=fiducial))
+        elif theory_name in ['fs', 'velocileptors']:
+            klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
+            pt = EmulatedCalculator.load(pk_emulator_fn.format(theory_name))
+            theory_pk = LPTVelocileptorsTracerPowerSpectrumMultipoles(pt=pt, k=pt.k)
+            theory_pk.params['b1'].update(ref={'limits': [b1 - 1.2, b1 - 0.8]})
+            theory_pk.params['alpha6'].update(fixed=True)
+            if 4 not in klim:
+                for param in theory_pk.params.select(basename=['alpha4', 'ct4*', 'sn4*']): param.update(fixed=True)
         covariance = ObservablesCovarianceMatrix(observable, footprints=footprint, theories=theory_pk, resolution=5)  # Gaussian covariance matrix
 
     covmat_params = {'b1': b0 / fiducial.growth_factor(z), **expected, **fixed_params, **covmat_params}
@@ -601,7 +614,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
 
     from desilike.profilers import MinuitProfiler
 
-    def save_profiles(profiles, base=''):
+    def save_profiles(profiles, likelihood=likelihood, base=''):
         likelihood(**profiles.bestfit.choice(input=True))
         if likelihood.mpicomm.rank == 0:
             observable = likelihood.observables[0]
@@ -634,11 +647,13 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         observable_pk = TracerPowerSpectrumMultipolesObservable(data=(data or {}),  # data can be a dictionary of parameters
                                                                 # fit monopole and quadrupole, between 0.02 and 0.3 h/Mpc, with 0.005 h/Mpc steps
                                                                 klim=klim,
+                                                                wmatrix='wmatrix.npy',
+                                                                kinlim=(0.01, 0.4),
                                                                 theory=theory_pk)
         covariance_pk = ObservablesCovarianceMatrix(observable_pk, footprints=footprint, resolution=5)  # Gaussiancovariance matrix
-        likelihood_pk = ObservablesGaussianLikelihood(observables=[observable_pk], covariance=covariance_pk(**covmat_params) if covmat is None else covmat)
-        for param in likelihood_pk.all_params.select(basename=solved_params):
-            param.update(prior=None, derived='.auto')
+        likelihood_pk = ObservablesGaussianLikelihood(observables=observable_pk, covariance=covariance_pk(**covmat_params) if covmat is None else covmat)
+        #for param in likelihood_pk.all_params.select(basename=solved_params):
+        #    param.update(prior=None, derived='.auto')
         for param in fixed_params:
             likelihood_pk.all_params[param].update(fixed=True, value=fixed_params[param])
         for param in expected:
@@ -646,7 +661,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         profiler = MinuitProfiler(likelihood_pk, seed=42)
         profiles = profiler.maximize(niterations=3)
         covmat_params.update(profiles.bestfit.choice(index='argmax', varied=True))
-        save(profiles, likelihood=likelihood_pk, base='preliminary-')
+        save_profiles(profiles, likelihood=likelihood_pk, base='preliminary-')
         for param in expected:
             likelihood_pk.all_params[param].update(fixed=False)
 
@@ -735,7 +750,7 @@ if __name__ == '__main__':
     for theory_name in args.todo:
         if theory_name in ['emulator', 'profiling', 'sampling']: continue
         kwargs = {'theory_name': theory_name}
-        if theory_name == 'bao': kwargs['emulator_fn'] = None 
+        if theory_name == 'bao': kwargs['emulator_fn'] = None
         else: kwargs['template_name'] = 'shapefit'
         if 'emulator' in args.todo: kwargs['save_emulator'] = True
         kwargs['todo'] = args.todo

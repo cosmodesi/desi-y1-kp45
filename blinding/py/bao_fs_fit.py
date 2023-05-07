@@ -276,7 +276,7 @@ def get_blind_cosmo(z, tracer, *args, **kwargs):
     return dict(qpar=qpar, qper=qper, df=df, dm=0.)
 
 
-def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
+def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}_{}_{}_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
     """
     This function performs a power spectrum fit for a given tracer and region, using a specified theory
     and covariance matrix, and saves the resulting profiles and / or chains.
@@ -316,7 +316,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
 
     if emulator_fn is not None:
-        emulator_fn = emulator_fn.format(theory_name)
+        emulator_fn = emulator_fn.format(theory_name, tracer, region, zmin, zmax)
 
     data = read_pk(tracer, region, zmin, zmax, **kwargs)
 
@@ -374,26 +374,32 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin_matrix.npy'.format(region, zmin, zmax)))
         #wmatrix.resum_input_odd_wide_angle()
         from pypower import BaseMatrix, PowerSpectrumOddWideAngleMatrix, PowerSpectrumSmoothWindowMatrix, PowerSpectrumSmoothWindow
-        wmat_fn = 'wmatrix.npy'
+        wmat_fn = 'wmatrix_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)
         if os.path.isfile(wmat_fn):
             wmatrix = BaseMatrix.load(wmat_fn)
         else:
-            window = PowerSpectrumSmoothWindow.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin.npy'.format(region, zmin, zmax)))
-            kout = data.k
-            ellsout = [0, 2, 4]  # output multipoles
-            ellsin = [0, 2, 4]  # input (theory) multipoles
-            wa_orders = 1  # wide-angle order
-            sep = np.geomspace(1e-4, 1e4, 1024 * 16)  # configuration space separation for FFTlog
-            kin_rebin = 4  # rebin input theory to save memory
-            kin_lim = (0, 1.)  # pre-cut input (theory) ks to save some memory
-            # Input projections for window function matrix:
-            # theory multipoles at wa_order = 0, and wide-angle terms at wa_order = 1
-            projsin = ellsin + PowerSpectrumOddWideAngleMatrix.propose_out(ellsin, wa_orders=wa_orders)
-            # Window matrix
-            wmatrix = PowerSpectrumSmoothWindowMatrix(kout, projsin=projsin, projsout=ellsout, window=window, sep=sep, kin_rebin=kin_rebin, kin_lim=kin_lim)
-            # We resum over theory odd-wide angle
-            wmatrix.resum_input_odd_wide_angle()
-            wmatrix.save(wmat_fn)
+            window_fn = os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax))
+            try:
+                window = PowerSpectrumSmoothWindow.load(window_fn)  # for some reason, LRG have PowerSpectrumSmoothWindow but QSO have BaseMatrix
+            except AttributeError:
+                wmatrix = BaseMatrix.load(window_fn)
+                wmatrix.save(wmat_fn)
+            else:
+                kout = data.k
+                ellsout = [0, 2, 4]  # output multipoles
+                ellsin = [0, 2, 4]  # input (theory) multipoles
+                wa_orders = 1  # wide-angle order
+                sep = np.geomspace(1e-4, 1e4, 1024 * 16)  # configuration space separation for FFTlog
+                kin_rebin = 4  # rebin input theory to save memory
+                kin_lim = (0, 1.)  # pre-cut input (theory) ks to save some memory
+                # Input projections for window function matrix:
+                # theory multipoles at wa_order = 0, and wide-angle terms at wa_order = 1
+                projsin = ellsin + PowerSpectrumOddWideAngleMatrix.propose_out(ellsin, wa_orders=wa_orders)
+                # Window matrix
+                wmatrix = PowerSpectrumSmoothWindowMatrix(kout, projsin=projsin, projsout=ellsout, window=window, sep=sep, kin_rebin=kin_rebin, kin_lim=kin_lim)
+                # We resum over theory odd-wide angle
+                wmatrix.resum_input_odd_wide_angle()
+                wmatrix.save(wmat_fn)
 
     observable = TracerPowerSpectrumMultipolesObservable(data=(data or {}),  # data can be a dictionary of parameters
                                                          # fit monopole and quadrupole, between 0.01 and 0.4 h/Mpc, with 0.005 h/Mpc steps
@@ -486,7 +492,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         save_chains(sampler.chains, base='')
 
 
-def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_name='bao', save_emulator=False, emulator_fn='corr_emulator_{}.npy', pk_emulator_fn='power_emulator_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
+def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_name='bao', save_emulator=False, emulator_fn='corr_emulator_{}_{}_{}_{}_{}.npy', pk_emulator_fn='power_emulator_{}_{}_{}_{}_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
     """
     This function performs a correlation function fit for a given tracer and region, using a specified theory
     and covariance matrix, and saves the resulting profiles and / or chains.
@@ -522,7 +528,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
 
     if emulator_fn is not None:
-        emulator_fn = emulator_fn.format(theory_name)
+        emulator_fn = emulator_fn.format(theory_name, tracer, region, zmin, zmax)
 
     data = read_xi(tracer, region, zmin, zmax, **kwargs)
 
@@ -585,7 +591,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
             theory_pk = DampedBAOWigglesTracerPowerSpectrumMultipoles(template=BAOPowerSpectrumTemplate(z=z, fiducial=fiducial))
         elif theory_name in ['fs', 'velocileptors']:
             klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
-            pt = EmulatedCalculator.load(pk_emulator_fn.format(theory_name))
+            pt = EmulatedCalculator.load(pk_emulator_fn.format(theory_name, tracer, region, zmin, zmax))
             theory_pk = LPTVelocileptorsTracerPowerSpectrumMultipoles(pt=pt, k=pt.k)
             theory_pk.params['b1'].update(ref={'limits': [b1 - 1.2, b1 - 0.8]})
             theory_pk.params['alpha6'].update(fixed=True)
@@ -647,7 +653,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         observable_pk = TracerPowerSpectrumMultipolesObservable(data=(data or {}),  # data can be a dictionary of parameters
                                                                 # fit monopole and quadrupole, between 0.02 and 0.3 h/Mpc, with 0.005 h/Mpc steps
                                                                 klim=klim,
-                                                                wmatrix='wmatrix.npy',
+                                                                wmatrix='wmatrix_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax),
                                                                 kinlim=(0.01, 0.4),
                                                                 theory=theory_pk)
         covariance_pk = ObservablesCovarianceMatrix(observable_pk, footprints=footprint, resolution=5)  # Gaussiancovariance matrix
@@ -757,5 +763,5 @@ if __name__ == '__main__':
         print('\n-->  Running *Fourier space* fit pipeline for tracer type {}\n'.format(args.type))
         fit_pk(os.path.join(out_dir, 'pk'), args.type, args.region, covmat_params=os.path.join(covmat_params, 'bao', 'pk') if covmat_params is not None else None, covmat_pk=covmat_pk, wmat_pk=wmat_pk, blinded_index=blinded_index, **kwargs)
 
-        print('\n-->  Running *Configuration space* fit pipeline for tracer type {}\n'.format(args.type))
+        print('\n-->  Running *configuration space* fit pipeline for tracer type {}\n'.format(args.type))
         fit_xi(os.path.join(out_dir, 'xi'), args.type, args.region, covmat_params=os.path.join(covmat_params, 'bao', 'xi',) if covmat_params is not None else None, covmat_xi=covmat_xi, **kwargs)

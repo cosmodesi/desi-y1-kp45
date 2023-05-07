@@ -371,7 +371,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     if wmat_pk is not None:
         # People should save the wide-angle-resumed matrix directly... (in this case, do: wmatrix = BaseMatrix.load(fn))
         #from pypower import PowerSpectrumSmoothWindowMatrix
-        #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin_matrix.npy'.format(region, zmin, zmax)))
+        #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin_matrix.npy'.format(tracer, region, zmin, zmax)))
         #wmatrix.resum_input_odd_wide_angle()
         from pypower import BaseMatrix, PowerSpectrumOddWideAngleMatrix, PowerSpectrumSmoothWindowMatrix, PowerSpectrumSmoothWindow
         wmat_fn = 'wmatrix_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)

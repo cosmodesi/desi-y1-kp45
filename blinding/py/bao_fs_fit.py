@@ -371,14 +371,14 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     if wmat_pk is not None:
         # People should save the wide-angle-resumed matrix directly... (in this case, do: wmatrix = BaseMatrix.load(fn))
         #from pypower import PowerSpectrumSmoothWindowMatrix
-        #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin_matrix.npy'.format(region, zmin, zmax)))
+        #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin_matrix.npy'.format(tracer, region, zmin, zmax)))
         #wmatrix.resum_input_odd_wide_angle()
         from pypower import BaseMatrix, PowerSpectrumOddWideAngleMatrix, PowerSpectrumSmoothWindowMatrix, PowerSpectrumSmoothWindow
         wmat_fn = 'wmatrix.npy'
         if os.path.isfile(wmat_fn):
             wmatrix = BaseMatrix.load(wmat_fn)
         else:
-            window = PowerSpectrumSmoothWindow.load(os.path.join(wmat_pk, 'window_smooth_LRG_{}_{}_{}_default_lin.npy'.format(region, zmin, zmax)))
+            window = PowerSpectrumSmoothWindow.load(os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)))
             kout = data.k
             ellsout = [0, 2, 4]  # output multipoles
             ellsin = [0, 2, 4]  # input (theory) multipoles

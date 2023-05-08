@@ -276,7 +276,7 @@ def get_blind_cosmo(z, tracer, *args, **kwargs):
     return dict(qpar=qpar, qper=qper, df=df, dm=0.)
 
 
-def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}_{}_{}_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
+def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=None, blinded_index=None, theory_name='bao', save_emulator=False, emulator_fn='power_emulator_{}_{}_{}_{}_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
     """
     This function performs a power spectrum fit for a given tracer and region, using a specified theory
     and covariance matrix, and saves the resulting profiles and / or chains.

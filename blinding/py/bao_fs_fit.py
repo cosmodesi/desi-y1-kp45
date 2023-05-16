@@ -77,7 +77,7 @@ def parse_args():
         help='whether to perform preliminary BAO fit or load it from disk')
     parser.add_argument(
         '--fixed_covariance', type=str,
-        help='whether to fixcovariance; in this case, path to directory where profiles are saved')
+        help='whether to fix covariance; in this case, path to directory where profiles will be saved')
     parser.add_argument(
         '--covmat_pk', type=str,
         help='wheter to load Pk covariance from DISK; in this case, path to directory where CovPk are saved')

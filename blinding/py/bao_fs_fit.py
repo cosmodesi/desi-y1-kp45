@@ -311,7 +311,7 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         Specifies which tasks to perform. It can contain the values "profiling" and/or "sampling", which indicate whether to run posterior profiling or sampling, respectively.
     """
     fiducial = DESI()
-    zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
+    zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (0.8, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
 
@@ -328,7 +328,10 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         solved_params = ['al*_*']
     elif theory_name in ['fs', 'velocileptors']:
         fixed_params = {}
-        klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
+        if tracer == 'QSO':
+            klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005], 4: [0.02, 0.30, 0.005]}
+        else:
+            klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
         template = (ShapeFitPowerSpectrumTemplate if template_name == 'shapefit' else DirectPowerSpectrumTemplate)(z=z, fiducial=fiducial)
         theory = LPTVelocileptorsTracerPowerSpectrumMultipoles(template=template)
         theory.params['b1'].update(ref={'limits': [b1 - 1.2, b1 - 0.8]})
@@ -525,7 +528,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         Specifies which tasks to perform. It can contain the values "profiling" and/or "sampling", which indicate whether to run posterior profiling or sampling, respectively.
     """
     fiducial = DESI()
-    zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (1.6, 2.1, 1.4, 1.2)}[tracer]
+    zmin, zmax, z, b0 = {'LRG': (0.4, 1.1, 0.8, 1.7), 'ELG': (1.1, 1.6, 1.1, 0.84), 'QSO': (0.8, 2.1, 1.4, 1.2)}[tracer]
     b1 = b0 / fiducial.growth_factor(z)
     footprint, expected = None, get_blind_cosmo(z, tracer, region, zmin, zmax, **kwargs)
 
@@ -592,7 +595,11 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
             klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005]}
             theory_pk = DampedBAOWigglesTracerPowerSpectrumMultipoles(template=BAOPowerSpectrumTemplate(z=z, fiducial=fiducial))
         elif theory_name in ['fs', 'velocileptors']:
-            klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
+            if tracer == 'QSO':
+                klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005], 4: [0.02, 0.30, 0.005]}
+            else:
+                klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
+
             pt = EmulatedCalculator.load(pk_emulator_fn.format(theory_name, tracer, region, zmin, zmax))
             theory_pk = LPTVelocileptorsTracerPowerSpectrumMultipoles(pt=pt, k=pt.k)
             theory_pk.params['b1'].update(ref={'limits': [b1 - 1.2, b1 - 0.8]})
@@ -691,7 +698,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
         from desilike.samplers import EmceeSampler
         for param in likelihood.all_params.select(basename=solved_params): param.update(prior=None, derived='.auto')
         chains = [os.path.join(out_dir, 'chain_{}_{}_{}_{}_{:d}.npy'.format(tracer, region, zmin, zmax, ichain)) for ichain in range(4)]
-        sampler = EmceeSampler(likelihood, chains=len(save_fn), nwalkers=40, seed=42, save_fn=save_fn)
+        sampler = EmceeSampler(likelihood, chains=len(chains), nwalkers=40, seed=42, save_fn=chains)
         chains = sampler.run(check={'max_eigen_gr': 0.03})
         save_chains(chains, base='')
 

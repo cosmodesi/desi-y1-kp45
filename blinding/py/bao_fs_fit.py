@@ -448,10 +448,10 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
 
     def save_chains(chains, base=''):
         """This function saves chains and generates plots and summary statistics."""
-        from desilike.samples import Chain
+        from desilike.samples import Chain, plotting
         if likelihood.mpicomm.rank == 0:
             chain = Chain.concatenate([chain.remove_burnin(0.5)[::10] for chain in chains])
-        likelihood(**likelihood.mpicomm.bcast(chain.choice(input=True) if likelihood.mpicomm.rank == 0 else None, root=0))
+        likelihood(**likelihood.mpicomm.bcast(chain.choice(index='argmax', input=True) if likelihood.mpicomm.rank == 0 else None, root=0))
         if likelihood.mpicomm.rank == 0:
             observable = likelihood.observables[0]
             observable.plot(fn=os.path.join(out_dir, '{}poles_chain_{}_{}_{}_{}.png'.format(base, tracer, region, zmin, zmax)))
@@ -460,7 +460,8 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
             chain.attrs['covmat'] = observable.covariance
             chain.save(os.path.join(out_dir, '{}chain_{}_{}_{}_{}.npy'.format(base, tracer, region, zmin, zmax)))
             chain.to_stats(fn=os.path.join(out_dir, '{}chain_{}_{}_{}_{}.stats'.format(base, tracer, region, zmin, zmax)))
-            print(chain.to_stats(params=chain.params(basename=['qpar', 'qper', 'df', 'dm']), tablefmt='pretty'))
+            plotting.plot_triangle(chain, fn=os.path.join(out_dir, '{}triangle_chain_{}_{}_{}_{}.png'.format(base, tracer, region, zmin, zmax)))
+            print(chain.to_stats(params=['qpar', 'qper', 'df', 'dm'], tablefmt='pretty'))
 
     if run_preliminary:
         # Preliminary fit, to recompute a more accuratecovariance matrix
@@ -487,9 +488,10 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
     if 'sampling' in todo:
         from desilike.samplers import EmceeSampler
         for param in likelihood.all_params.select(basename=solved_params): param.update(prior=None, derived='.auto')
-        sampler = EmceeSampler(likelihood, chains=4, nwalkers=40, seed=42, save_fn=os.path.join(out_dir, 'chain_{}_{}_{}_{}_*.npy'.format(tracer, region, zmin, zmax)))
-        sampler.run(check={'max_eigen_gr': 0.03})
-        save_chains(sampler.chains, base='')
+        chains = [os.path.join(out_dir, 'chain_{}_{}_{}_{}_{:d}.npy'.format(tracer, region, zmin, zmax, ichain)) for ichain in range(4)]
+        sampler = EmceeSampler(likelihood, chains=len(chains), nwalkers=40, seed=42, save_fn=chains)
+        chains = sampler.run(check={'max_eigen_gr': 0.03})
+        save_chains(chains, base='')
 
 
 def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_name='bao', save_emulator=False, emulator_fn='corr_emulator_{}_{}_{}_{}_{}.npy', pk_emulator_fn='power_emulator_{}_{}_{}_{}_{}.npy', template_name='shapefit', todo='profiling', **kwargs):
@@ -633,10 +635,10 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
             print(profiles.to_stats(tablefmt='pretty'))
 
     def save_chains(chains, base=''):
-        from desilike.samples import Chain
+        from desilike.samples import Chain, plotting
         if likelihood.mpicomm.rank == 0:
             chain = Chain.concatenate([chain.remove_burnin(0.5)[::10] for chain in chains])
-        likelihood(**likelihood.mpicomm.bcast(chain.choice(input=True) if likelihood.mpicomm.rank == 0 else None, root=0))
+        likelihood(**likelihood.mpicomm.bcast(chain.choice(index='argmax', input=True) if likelihood.mpicomm.rank == 0 else None, root=0))
         if likelihood.mpicomm.rank == 0:
             observable = likelihood.observables[0]
             observable.plot(fn=os.path.join(out_dir, '{}poles_chain_{}_{}_{}_{}.png'.format(base, tracer, region, zmin, zmax)))
@@ -645,6 +647,7 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
             chain.save(os.path.join(out_dir, '{}chain_{}_{}_{}_{}.npy'.format(base, tracer, region, zmin, zmax)))
             observable.plot_covariance_matrix(fn=os.path.join(out_dir, '{}covariance_{}_{}_{}_{}.png'.format(base, tracer, region, zmin, zmax)))
             chain.to_stats(fn=os.path.join(out_dir, '{}chain_{}_{}_{}_{}.stats'.format(base, tracer, region, zmin, zmax)))
+            plotting.plot_triangle(chain, fn=os.path.join(out_dir, '{}triangle_chain_{}_{}_{}_{}.png'.format(base, tracer, region, zmin, zmax)))
             print(chain.to_stats(params=chain.params(basename=['qpar', 'qper', 'df', 'dm']), tablefmt='pretty'))
 
     if run_preliminary:
@@ -687,9 +690,10 @@ def fit_xi(out_dir, tracer, region, covmat_params=None, covmat_xi=None, theory_n
     if 'sampling' in todo:
         from desilike.samplers import EmceeSampler
         for param in likelihood.all_params.select(basename=solved_params): param.update(prior=None, derived='.auto')
-        sampler = EmceeSampler(likelihood, chains=4, nwalkers=40, seed=42, save_fn=os.path.join(out_dir, 'chain_{}_{}_{}_{}_*.npy'.format(tracer, region, zmin, zmax)))
-        sampler.run(check={'max_eigen_gr': 0.03})
-        save_chains(sampler.chains, base='')
+        chains = [os.path.join(out_dir, 'chain_{}_{}_{}_{}_{:d}.npy'.format(tracer, region, zmin, zmax, ichain)) for ichain in range(4)]
+        sampler = EmceeSampler(likelihood, chains=len(save_fn), nwalkers=40, seed=42, save_fn=save_fn)
+        chains = sampler.run(check={'max_eigen_gr': 0.03})
+        save_chains(chains, base='')
 
 
 # Setting up directories and file paths for a BAO and RSD fit

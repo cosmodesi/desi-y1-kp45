@@ -261,7 +261,7 @@ def get_blind_cosmo(z, tracer, *args, **kwargs):
     cosmo = fiducial = DESI()
 
     if blinded:
-        fn = os.path.join(in_dir, 'blinded_parameters_{}.csv'.format(tracer))
+        fn = os.path.join(in_dir, 'LSScats','blinded','blinded_parameters_{}.csv'.format(tracer))
         print('\nLoad blinded_parameters from: \n', fn)
         w0_blind, wa_blind, f_blind = np.loadtxt(fn, delimiter=',', skiprows=1)
         cosmo = fiducial.clone(w0_fld=w0_blind, wa_fld=wa_blind)
@@ -715,20 +715,30 @@ if __name__ == '__main__':
     print('\n/!\  Running BAO fit pipeline for tracer type {}\n'.format(args.type))
 
     if 'Y1/mock' in args.verspec:  # e.g., use 'mocks/FirstGenMocks/AbacusSummit/Y1/mock1' to get the 1st mock with fiberassign
-        in_dir = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', args.blind_cosmology)
-        if args.blind_cosmology == 'unblinded':
-            catalog_dir = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version)
-        else:
-            in_dir = os.path.join(in_dir, 'LSScats', 'blinded')
-            catalog_dir = in_dir
+        if os.path.normpath(args.basedir_in) == os.path.normpath('/global/cfs/cdirs/desi/survey/catalogs/'):
+                in_dir = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', args.blind_cosmology)
+                catalog_dir = os.path.join(in_dir, 'LSScats', 'blinded')
+                data_dir = catalog_dir
+                if args.blind_cosmology == 'unblinded':
+                    in_dir  = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version)
+                    catalog_dir = in_dir
+                    data_dir = os.path.join(in_dir, 'blinded','jmena', 'unblinded')
+        if os.path.normpath(args.basedir_in) == os.path.normpath('/pscratch/sd/u/uendert/blinding_mocks/'):
+            in_dir = os.path.join(args.basedir_in, args.blind_cosmology)
+            catalog_dir = '/global/cfs/cdirs/desi/survey/catalogs/' + args.survey + '/' + args.verspec + '/LSScats/' + args.version + '/blinded' + '/jmena/' + args.blind_cosmology + '/LSScats/blinded'
+            data_dir = os.path.join(in_dir, 'LSScats', 'blinded')
+            in_dir = os.path.join('/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/', args.blind_cosmology)
+            if args.blind_cosmology == 'unblinded':
+                in_dir  = os.path.join(args.basedir_in, args.blind_cosmology)
+                catalog_dir = '/global/cfs/cdirs/desi/survey/catalogs/' + args.survey + '/' + args.verspec + '/LSScats/' + args.version
+                data_dir = os.path.join(in_dir)
+
         if args.covmat_pk:
             covpk_dir = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', args.covmat_pk)# 'pk_xi_measurements', 'CovPk')
         if args.covmat_xi:
             rascalc_dir = os.path.join('/global/cfs/cdirs/desi/users/mrash/RascalC/', args.covmat_xi)
     else:
         raise ValueError('verspec {} not supported'.format(args.verspec))
-    catalog_dir = in_dir
-    data_dir = in_dir
     out_dir = args.basedir_out
 
     covmat_params = None

@@ -25,5 +25,6 @@ doc/_build/
 *.npy
 *.yaml
 *.vscode
+*JOB*
 # Unit test / coverage reports
 **/.coverage

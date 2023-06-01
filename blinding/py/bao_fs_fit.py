@@ -89,7 +89,7 @@ def parse_args():
         '--covmat_xi', type=str,
         help='wheter to load xi covariance from DISK; in this case, path to directory where RascalC Cov are saved')
     parser.add_argument(
-        '--todo', type=str, nargs='*', choices=['bao', 'emulator', 'fs', 'profiling', 'sampling'], default=['bao', 'profiling'],
+        '--todo', type=str, nargs='*', choices=['bao', 'emulator', 'fs', 'profiling', 'sampling', 'directfit'], default=['bao', 'profiling'],
         help='what to do')
 
     return parser.parse_args()
@@ -184,12 +184,20 @@ def get_footprint(tracer, region, zmin, zmax, completeness=''):
             randoms['WEIGHT'] *= alpha
         return Catalog.concatenate(list_data), Catalog.concatenate(list_randoms)
 
-    data_NS_fns = [os.path.join(catalog_dir, '{}_{}{}_clustering.dat.fits'.format(tracer, completeness, reg)) for reg in ['N', 'S']]
-    randoms_NS_fns = [os.path.join(catalog_dir, '{}_{}{}_0_clustering.ran.fits'.format(tracer, completeness, reg)) for reg in ['N', 'S']]
-    print('Loading data {}.'.format(data_NS_fns))
-    print('Loading randoms {}.'.format(randoms_NS_fns))
-    data_NS = [Catalog.read(fn) for fn in data_NS_fns]
-    randoms_NS = [Catalog.read(fn) for fn in randoms_NS_fns]
+    if 'iron' in args.verspec:
+        data_NS_fns = os.path.join(catalog_dir, '{}_{}{}_clustering.dat.fits'.format(tracer, completeness, region))
+        randoms_NS_fns = os.path.join(catalog_dir, '{}_{}{}_0_clustering.ran.fits'.format(tracer, completeness, region))
+        print('Loading data {}.'.format(data_NS_fns))
+        print('Loading randoms {}.'.format(randoms_NS_fns))
+        data_NS = [Catalog.read(data_NS_fns)]
+        randoms_NS = [Catalog.read(randoms_NS_fns)]
+    else:
+        data_NS_fns = [os.path.join(catalog_dir, '{}_{}{}_clustering.dat.fits'.format(tracer, completeness, reg)) for reg in ['N', 'S']]
+        randoms_NS_fns = [os.path.join(catalog_dir, '{}_{}{}_0_clustering.ran.fits'.format(tracer, completeness, reg)) for reg in ['N', 'S']]
+        print('Loading data {}.'.format(data_NS_fns))
+        print('Loading randoms {}.'.format(randoms_NS_fns))
+        data_NS = [Catalog.read(fn) for fn in data_NS_fns]
+        randoms_NS = [Catalog.read(fn) for fn in randoms_NS_fns]
 
     if region in ['NGC', 'SGC', 'NS']:
         data, randoms = concatenate(data_NS, randoms_NS, region)
@@ -216,7 +224,11 @@ def read_pk(tracer, region, zmin, zmax, plot=False):
     """Read power spectrum from file."""
 
     from pypower import PowerSpectrumStatistics
-    poles = PowerSpectrumStatistics.load(os.path.join(data_dir, 'pk', 'pk', 'pkpoles_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)))
+    
+    if 'iron' in args.verspec:
+        poles = PowerSpectrumStatistics.load(os.path.join(data_dir, 'pk','jmena', 'pkpoles_{}_{}_{}_{}_default_FKP_lin.npy'.format(tracer, region, zmin, zmax)))
+    else:
+        poles = PowerSpectrumStatistics.load(os.path.join(data_dir, 'pk', 'pk', 'pkpoles_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)))
 
     if plot:
         print('Shot noise is {:.4f}.'.format(poles.shotnoise))  # if cross-correlation, shot noise is 0.
@@ -231,7 +243,10 @@ def read_xi(tracer, region, zmin, zmax, plot=False):
 
     from pycorr import TwoPointCorrelationFunction
 
-    corr = TwoPointCorrelationFunction.load(os.path.join(data_dir, 'xi', 'smu', 'allcounts_{}_{}_{}_{}_default_lin_njack0_nran1_split20.npy'.format(tracer, region, zmin, zmax)))
+    if 'iron' in args.verspec:
+        corr = TwoPointCorrelationFunction.load(os.path.join(data_dir, 'xi', 'smu', 'allcounts_{}_{}_{}_{}_default_FKP_lin_njack0_nran1_split20.npy'.format(tracer, region, zmin, zmax)))
+    else:
+        corr = TwoPointCorrelationFunction.load(os.path.join(data_dir, 'xi', 'smu', 'allcounts_{}_{}_{}_{}_default_lin_njack0_nran1_split20.npy'.format(tracer, region, zmin, zmax)))
 
     if plot:
         corr.plot(show=True)
@@ -255,7 +270,7 @@ def get_blind_cosmo(z, tracer, *args, **kwargs):
     cosmo : dict
         A dictionary containing the values of `qpar`, `qper`, `df`, and `dm`.
     """
-    blinded = 'unblinded' not in in_dir
+    blinded = 'unblinded' not in in_dir and 'Y1/LSS/iron' not in in_dir
 
     # Template cosmology for the BAO fits
     cosmo = fiducial = DESI()
@@ -345,11 +360,11 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
 
     run_preliminary = covmat_params is None and covmat_pk is None
     covmat = None
-    from desilike.utils import path_types
+    from desilike.utils import is_path
     if run_preliminary:
         print('\nNo preliminary BAO fit provided. Runing BAO fit preliminary pipeline then.\n')
         covmat_params = {}
-    elif isinstance(covmat_params, path_types):
+    elif is_path(covmat_params):
         fn = os.path.join(covmat_params, 'profile_{}_{}_{}_{}.npy'.format(tracer, region, zmin, zmax))
         profiles = Profiles.load(fn)
         covmat_params = {}
@@ -377,11 +392,17 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
         #wmatrix = PowerSpectrumSmoothWindowMatrix.load(os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin_matrix.npy'.format(tracer, region, zmin, zmax)))
         #wmatrix.resum_input_odd_wide_angle()
         from pypower import BaseMatrix, PowerSpectrumOddWideAngleMatrix, PowerSpectrumSmoothWindowMatrix, PowerSpectrumSmoothWindow
-        wmat_fn = 'wmatrix_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)
+        if 'iron' in args.verspec:
+            wmat_fn = 'wmatrix_{}_{}_{}_{}_default_FKP_lin.npy'.format(tracer, region, zmin, zmax)
+        else:
+            wmat_fn = 'wmatrix_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax)
         if os.path.isfile(wmat_fn):
             wmatrix = BaseMatrix.load(wmat_fn)
         else:
-            window_fn = os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax))
+            if 'iron' in args.verspec:
+                window_fn = os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_FKP_lin.npy'.format(tracer, region, zmin, zmax))
+            else:
+                window_fn = os.path.join(wmat_pk, 'window_smooth_{}_{}_{}_{}_default_lin.npy'.format(tracer, region, zmin, zmax))
             try:
                 window = PowerSpectrumSmoothWindow.load(window_fn)  # for some reason, LRG have PowerSpectrumSmoothWindow but QSO have BaseMatrix
             except AttributeError:
@@ -737,6 +758,12 @@ if __name__ == '__main__':
             covpk_dir = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', args.covmat_pk)# 'pk_xi_measurements', 'CovPk')
         if args.covmat_xi:
             rascalc_dir = os.path.join('/global/cfs/cdirs/desi/users/mrash/RascalC/', args.covmat_xi)
+    
+    if 'iron' in args.verspec:
+        if os.path.normpath(args.basedir_in) == os.path.normpath('/global/cfs/cdirs/desi/survey/catalogs/'):
+            in_dir = os.path.join(args.basedir_in, args.survey, 'LSS', args.verspec, 'LSScats', args.version, 'blinded')
+            catalog_dir = os.path.join(in_dir)
+            data_dir = catalog_dir
     else:
         raise ValueError('verspec {} not supported'.format(args.verspec))
     out_dir = args.basedir_out
@@ -745,7 +772,11 @@ if __name__ == '__main__':
     covmat_pk = None
     covmat_xi = None
     blinded_index = None
-    wmat_pk = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', 'unblinded', 'pk', 'pk')
+    
+    if 'iron' in args.verspec:
+        wmat_pk = os.path.join(os.path.join(args.basedir_in, args.survey, 'LSS', args.verspec, 'LSScats', args.version, 'blinded', 'pk', 'jmena'))
+    else:
+        wmat_pk = os.path.join(args.basedir_in, args.survey, args.verspec, 'LSScats', args.version, 'blinded', 'jmena', 'unblinded', 'pk', 'pk')
 
     # The code is checking for certain input arguments and then running a fit pipeline for Fourier
     # space and configuration space for a given tracer type. It loads covariance matrices and

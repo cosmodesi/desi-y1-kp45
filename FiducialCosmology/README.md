@@ -11,9 +11,9 @@ These scripts require the following entries as input:
 - mocktype: cubic, cutsky
 - tracer: lrg, elg, qso
 - whichmocks: firstgen, sv3
+- true cosmology: 000, 003, 004 (cosmology from the simulation)
+- grid cosmology: 000, 001, 002, 003, 004 (cosmology for the redshift to distance relation)
 - phase: an integer from 0 to 25 for c000 and from 0 to 5 for c003 and c004.
-- true cosmology (optional): 000, 003, 004 (cosmology from the simulation)
-- grid cosmology (optional): 000, 001, 002, 003, 004 (cosmology for the redshift to distance relation)
 
 For cutsky mocks you additionally need:
 - zbin: 0, 1, 2
@@ -22,7 +22,7 @@ For cutsky mocks you additionally need:
 
 For example:
 ``` terminal
-python power_spectrum.py cubicbox lrg firstgen 0 -ct 000 -cg 003
+python power_spectrum.py cutsky lrg firstgen 000 003 22 0
 ```
 For FirtGen mocks, only c000 mocks are available.
 For c003 and c004 only boxes for LRGs and ELGs are avaliable (no cutsky yet).

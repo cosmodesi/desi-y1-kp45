@@ -2,7 +2,7 @@
 #SBATCH -J pk_cubic_pre
 #SBATCH -q regular
 #SBATCH -N 1
-#SBATCH --array=0-4
+#SBATCH --array=0-3
 #SBATCH -t 03:00:00
 #SBATCH -o ./out_files/%x_%j.out
 #SBATCH -e ./out_files/%x_%j.err
@@ -14,7 +14,7 @@ source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
 
 c=${SLURM_ARRAY_TASK_ID}
 
-torun="/global/homes/a/alexpzfz/FiducialCosmology/power_spectrum.py"
+torun="/global/homes/a/alexpzfz/alexpzfz/FiducialCosmology/power_spectrum_new.py"
 
 for tracer in lrg elg qso;
 do

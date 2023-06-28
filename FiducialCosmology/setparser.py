@@ -15,8 +15,9 @@ def set_parser(kind='clustering'):
     parser.add_argument('-ct', '--cosmo_true', choices=['000', '003', '004'],
                         default='000')
     parser.add_argument('-cg', '--cosmo_grid', choices=[f'00{i}' for i in range(5)],
-                        default='000')
-    
+                        default='000')    
+    parser.add_argument('-c', '--cap', choices=['ngc', 'sgc'],
+                         help='North/South Galactic Cap or both(None)', default=None)
     if kind!='recon':
         parser.add_argument('-r', '--rectype', choices=['reciso', 'recsym'],
                              help='Type of reconstruction.', default=None)

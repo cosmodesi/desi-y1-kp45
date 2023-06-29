@@ -72,6 +72,7 @@ if __name__ == "__main__":
                 recon=dataset_pk.recon,                   
                 isotropic=dataset_pk.isotropic,
                 marg="full",                              # Analytic marginalisation
+                fix_params=("om","alpha","epsilon"),
                 poly_poles=dataset_pk.fit_poles,
                 correction=Correction.NONE,               # No covariance matrix debiasing
                 n_poly=6,                                 # 6 polynomial terms for P(k)

@@ -229,7 +229,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
 
     # Load theory
     theory = get_theory(theory_name=theory_name, observable_name=observable_name, template=None, b1E=b1E, ells=klim.keys())
-    if 'bao' in theory_name:
+    if 'bao' in template_name:
         if save_emulator:
             raise ValueError('No need to build an emulator for the BAO model!')
         emulator_fn = None

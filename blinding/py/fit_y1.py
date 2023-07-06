@@ -4,6 +4,43 @@ import argparse
 
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
 
+if os.path.dirname('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'):
+    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
+else:
+    TheCov_dir = None
+
+def cut_matrix(cov, xcov, ellscov, xlim):
+    '''
+    The function cuts a matrix based on specified indices and returns the resulting submatrix.
+
+    Parameters
+    ----------
+    cov : 2D array
+        A square matrix representing the covariance matrix.
+    xcov : 1D array
+        x-coordinates in the covariance matrix.
+    ellscov : list
+        Multipoles in the covariance matrix.
+    xlim : tuple
+        `xlim` is a dictionary where the keys are `ell` and the values are tuples of two floats
+        representing the lower and upper limits of `xcov` for that `ell` value to be returned.
+
+    Returns
+    -------
+    cov : array
+        Subset of the input matrix `cov`, based on `xlim`.
+        The subset is determined by selecting rows and columns of `cov` corresponding to the
+        values of `ell` and `xcov` that fall within the specified `xlim` range.
+    '''
+    assert len(cov) == len(xcov) * len(ellscov), 'Input matrix has size {}, different than {} x {}'.format(len(cov), len(xcov), len(ellscov))
+    indices = []
+    for ell, xlim in xlim.items():
+        index = ellscov.index(ell) * len(xcov) + np.arange(len(xcov))
+        index = index[(xcov >= xlim[0]) & (xcov <= xlim[1])]
+        indices.append(index)
+    indices = np.concatenate(indices, axis=0)
+    return cov[np.ix_(indices, indices)]
+
 
 def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
     """Return footprints (for all redshift slices), specifying redshift density nbar and area, using Y1 data."""
@@ -244,22 +281,34 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
         theory.init.update(pt=emulator.to_calculator())
     
     if refine_cov:
-        if covariance_fn is not None:
-            covariance_fn = covariance_fn.format(tracer, observable_name, theory_name, template_name)
-        if os.path.isfile(covariance_fn):
-            likelihood.init.update(covariance=np.load(covariance_fn))
+        if TheCov_dir is not None:
+            region = 'NGCSGCcomb'
+            zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
+            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_{}_{}_{}.txt'.format(tracer, region, zlim[0], zlim[1])
+            if os.path.isfile(covariance_fn):
+                cov = np.loadtxt(covariance_fn)
+                print('\nLoading Pk covariance from {}.\n'.format(covariance_fn))
+                kmin, kmax, dk = 0.0, 0.4, 0.005
+                kmid = np.arange(kmin + dk/2, kmax + dk/2, dk)
+                cov = cut_matrix(cov, kmid, (0, 2, 4), klim)
+                likelihood.init.update(covariance=cov)
         else:
-            template_name_pk, theory_name_pk, observable_name_pk = 'shapefit', 'velocileptors', 'power'
-            likelihood_pk = get_observable_likelihood(theory_name=theory_name_pk, template_name=template_name_pk, observable_name=observable_name_pk, tracer=tracer, solve=solve, save_emulator=False, rpcut=rpcut, refine_cov=False, fix_template=True)
-            from desilike.profilers import MinuitProfiler
-            profiler = MinuitProfiler(likelihood_pk, seed=42)
-            profiles = profiler.maximize(niterations=10)
-            if profiler.mpicomm.rank == 0:
-                print(profiles.to_stats(tablefmt='pretty'))
-            cov = ObservablesCovarianceMatrix(observable, footprints=footprint, theories=[likelihood_pk.observables[0].wmatrix.theory], resolution=5)(**profiles.bestfit.choice(input=True))
             if covariance_fn is not None:
-                np.save(covariance_fn, cov)
-            likelihood.init.update(covariance=cov)
+                covariance_fn = covariance_fn.format(tracer, observable_name, theory_name, template_name)
+            if os.path.isfile(covariance_fn):
+                likelihood.init.update(covariance=np.load(covariance_fn))
+            else:
+                template_name_pk, theory_name_pk, observable_name_pk = 'shapefit', 'velocileptors', 'power'
+                likelihood_pk = get_observable_likelihood(theory_name=theory_name_pk, template_name=template_name_pk, observable_name=observable_name_pk, tracer=tracer, solve=solve, save_emulator=False, rpcut=rpcut, refine_cov=False, fix_template=True)
+                from desilike.profilers import MinuitProfiler
+                profiler = MinuitProfiler(likelihood_pk, seed=42)
+                profiles = profiler.maximize(niterations=10)
+                if profiler.mpicomm.rank == 0:
+                    print(profiles.to_stats(tablefmt='pretty'))
+                cov = ObservablesCovarianceMatrix(observable, footprints=footprint, theories=[likelihood_pk.observables[0].wmatrix.theory], resolution=5)(**profiles.bestfit.choice(input=True))
+                if covariance_fn is not None:
+                    np.save(covariance_fn, cov)
+                likelihood.init.update(covariance=cov)
     
     if 'direct' in template_name and cosmo is not None:  # external cosmo
         template.init.update(cosmo=cosmo)

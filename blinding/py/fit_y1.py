@@ -170,6 +170,26 @@ def get_theory(theory_name='velocileptors', observable_name='power', b1E=1.9, te
 
 
 def get_fit_setup(tracer, theory_name='velocileptors'):
+    '''The function `get_fit_setup` returns the appropriate redshift limits, bias value, k limits, and s
+    limits based on the input tracer and theory name.
+    
+    Parameters
+    ----------
+    tracer
+        The tracer parameter represents the type of galaxy tracer being used in the analysis. It can take
+    the values 'BGS', 'LRG', 'ELG', or '
+    theory_name, optional
+        The name of the theory being used for the fit. The default value is 'velocileptors'.
+    
+    Returns
+    -------
+        a tuple containing the following values:
+    - zlim: a list of two values representing the lower and upper redshift limits
+    - b0: a float representing the bias parameter
+    - klim: a dictionary with keys as integers (0, 2, 4) and values as lists of three values
+    representing the lower limit, upper limit, and step size for the w
+    
+    '''
     ells = (0, 2, 4)
     if 'bao' in theory_name: ells = (0, 2)
     if tracer.startswith('BGS'):
@@ -374,13 +394,13 @@ def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', templ
     return likelihood
 
 
-def samples_fn(outdir, base='chain', compressed=False, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, rpcut=False, i=None):
+def samples_fn(outdir, base='chain', compressed=False, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, rpcut=False, i=None, outfile_format=None):
     fn = '_'.join([base, tracer, 'compressed_' + observable_name if compressed else observable_name, theory_name, template_name])
     if rpcut:
         fn += '_rpcut{}'.format(rpcut)
     if i is not None:
         fn += '_{:d}'.format(i)
-    fn += '.npy'
+    fn += '.npy' if outfile_format is None else '.' + outfile_format
     return os.path.join(outdir, fn)
 
 
@@ -404,6 +424,7 @@ if __name__ == '__main__':
 
     setup_logging()
 
+    print(f'\nargs = {args}\n')
     outdir = args.outdir
     tracers = args.tracer
     template_name = args.template
@@ -434,6 +455,9 @@ if __name__ == '__main__':
             profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn))
             profiles = profiler.maximize(niterations=10)
             # profiles = profiler.interval('qiso')
+            observable = likelihood.observables[0]
+            observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
+            profiles.to_stats(fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
             if profiler.mpicomm.rank == 0:
                 print(profiles.to_stats(tablefmt='pretty'))
 

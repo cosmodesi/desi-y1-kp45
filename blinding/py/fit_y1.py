@@ -384,7 +384,7 @@ if __name__ == '__main__':
             likelihood = get_likelihood(compressed=post, tracer=tracer, solve=True)
             profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn))
             profiles = profiler.maximize(niterations=10)
-            profiles = profiler.interval('qiso')
+            # profiles = profiler.interval('qiso')
             if profiler.mpicomm.rank == 0:
                 print(profiles.to_stats(tablefmt='pretty'))
 

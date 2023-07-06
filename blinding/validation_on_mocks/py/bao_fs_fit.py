@@ -89,7 +89,7 @@ def parse_args():
         '--covmat_xi', type=str,
         help='wheter to load xi covariance from DISK; in this case, path to directory where RascalC Cov are saved')
     parser.add_argument(
-        '--todo', type=str, nargs='*', choices=['bao', 'emulator', 'fs', 'profiling', 'sampling', 'directfit'], default=['bao', 'profiling'],
+        '--todo', type=str, nargs='*', choices=['bao', 'emulator', 'fs', 'profiling', 'sampling', 'direct'], default=['bao', 'profiling'],
         help='what to do')
 
     return parser.parse_args()
@@ -347,6 +347,11 @@ def fit_pk(out_dir, tracer, region, covmat_params=None, covmat_pk=None, wmat_pk=
             klim = {0: [0.02, 0.30, 0.005], 2: [0.02, 0.30, 0.005], 4: [0.02, 0.30, 0.005]}
         else:
             klim = {0: [0.02, 0.20, 0.005], 2: [0.02, 0.20, 0.005], 4: [0.02, 0.20, 0.005]}
+        
+        # template_name = 'direct'
+        # print("====================================")
+        # print('Using {} template'.format(template_name))
+        # print("====================================")
         template = (ShapeFitPowerSpectrumTemplate if template_name == 'shapefit' else DirectPowerSpectrumTemplate)(z=z, fiducial=fiducial)
         theory = LPTVelocileptorsTracerPowerSpectrumMultipoles(template=template)
         theory.params['b1'].update(ref={'limits': [b1 - 1.2, b1 - 0.8]})

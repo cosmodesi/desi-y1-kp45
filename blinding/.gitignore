@@ -26,5 +26,6 @@ doc/_build/
 *.yaml
 *.vscode
 *JOB*
+*.log
 # Unit test / coverage reports
 **/.coverage

@@ -5,7 +5,7 @@ import argparse
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
 
 if os.path.dirname('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'):
-    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
+    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/v0.1.2/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
 else:
     TheCov_dir = None
 
@@ -406,6 +406,8 @@ def samples_fn(outdir, base='chain', compressed=False, theory_name='velocileptor
 
 
 if __name__ == '__main__':
+    import time
+    time0 = time.time()
 
     import argparse
     parser = argparse.ArgumentParser(description='Y1 mocks full shape')
@@ -462,11 +464,20 @@ if __name__ == '__main__':
                 print(profiles.to_stats(tablefmt='pretty'))
 
         if 'sampling' in todo:
+            # start timer for this if statement
+            time1 = time.time()
+            # set up the likelihood
             likelihood = get_likelihood(compressed=post, tracer=tracer)
+            observable = likelihood.observables[0]
+            observable.plot(fn=samples_fn(outdir, base='poles_bestfit_before', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
             save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
             chains = nchains
             sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
             sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
+            observable = likelihood.observables[0]
+            observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
+            # print out time taken
+            print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
 
     if 'inference' in todo:
         likelihood = sum(get_likelihood(compressed='direct' not in template_name, tracer=tracer) for tracer in tracers)
@@ -491,3 +502,5 @@ if __name__ == '__main__':
         CobayaLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
         CosmoSISLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
         MontePythonLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+
+    print(f'## total time taken: {(time.time() - time0) / 60:.2f} mins')

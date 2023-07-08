@@ -205,6 +205,8 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         smin, kmax = 30., 0.17
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
+        # klim = {0: [0.03, kmax, 0.005]} #only monopole (Otavio wanted to test this)
+
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('ELG'):
         zlim = [0.8, 1.6]
@@ -452,6 +454,7 @@ if __name__ == '__main__':
             likelihood.mpicomm.barrier()  # just to wait all processes are done
 
         if 'profiling' in todo:
+            time2 = time.time()
             from desilike.profilers import MinuitProfiler, ScipyProfiler
             likelihood = get_likelihood(compressed=post, tracer=tracer, solve=True)
             profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn))
@@ -462,6 +465,8 @@ if __name__ == '__main__':
             profiles.to_stats(fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
             if profiler.mpicomm.rank == 0:
                 print(profiles.to_stats(tablefmt='pretty'))
+            # print out time taken
+            print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
 
         if 'sampling' in todo:
             # start timer for this if statement

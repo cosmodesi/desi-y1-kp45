@@ -16,14 +16,14 @@ dir_script=$HOME/desi-y1-kp45/blinding/py/
 cd $dir_script # go to the directory where the script is
 
 tracer='LRG'
-template='shapefit'
-theory='velocileptors'
+template='bao'
+theory='dampedbao'
 observable='power'
-todo='emulator sampling'
+todo='profiling'
 
 echo 'Running the RSD fitting pipeline'
 
-srun -N 1 -n 64 python fit_y1.py --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} > $HOME/desi-y1-kp45/blinding/scripts/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log 2>&1
+python fit_y1.py --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} > $HOME/desi-y1-kp45/blinding/scripts/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log 2>&1
 
 echo 'Done'
 

@@ -419,7 +419,7 @@ if __name__ == '__main__':
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
     parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, nargs=1, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape'), help='Where to save results')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape'), help='Where to save results')
     args = parser.parse_args()
 
     from desilike import setup_logging

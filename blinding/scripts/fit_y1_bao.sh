@@ -20,10 +20,12 @@ template='bao'
 theory='dampedbao'
 observable='power'
 todo='profiling'
+outdir='/pscratch/sd/u/uendert/test_y1_bao/'
+# only_now='only_now'
 
 echo 'Running the RSD fitting pipeline'
 
-python fit_y1.py --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} > $HOME/desi-y1-kp45/blinding/scripts/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log 2>&1
+python fit_y1.py --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir > $HOME/desi-y1-kp45/blinding/scripts/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log 2>&1
 
 echo 'Done'
 

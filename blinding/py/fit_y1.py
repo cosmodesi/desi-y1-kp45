@@ -459,7 +459,11 @@ if __name__ == '__main__':
             likelihood = get_likelihood(compressed=post, tracer=tracer, solve=True)
             profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn))
             profiles = profiler.maximize(niterations=10)
-            # profiles = profiler.interval('qiso')
+            if 'qiso' in template_name:
+                profiles = profiler.interval('qiso')
+                profiles = profiler.profile('qiso')
+
+            profiles.bestfit.choice(input=True)
             observable = likelihood.observables[0]
             observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
             profiles.to_stats(fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
@@ -470,15 +474,17 @@ if __name__ == '__main__':
 
         if 'sampling' in todo:
             # start timer for this if statement
+            from desilike.samples import Chain, plotting
             time1 = time.time()
             # set up the likelihood
             likelihood = get_likelihood(compressed=post, tracer=tracer)
-            observable = likelihood.observables[0]
-            observable.plot(fn=samples_fn(outdir, base='poles_bestfit_before', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
             save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
             chains = nchains
             sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
             sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
+            chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
+            likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters
+            likelihood.observables[0].plot(show=True)
             observable = likelihood.observables[0]
             observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
             # print out time taken

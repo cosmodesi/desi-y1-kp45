@@ -123,7 +123,7 @@ def get_template(template_name='standard', z=0.8, klim=None):
         template.params['omega_b'].update(fixed=False, prior={'dist': 'norm', 'loc': 0.02237, 'scale': 0.00037})
         template.params['n_s'].update(fixed=True)
     elif 'bao' in template_name:
-        template = BAOPowerSpectrumTemplate(z=z, apmode='qisoqap' if 'qisoqap' in template_name else 'qparqper')
+        template = BAOPowerSpectrumTemplate(z=z, apmode='qisoqap' if 'qisoqap' in template_name else 'qparqper', only_now=True if only_now_name else False)
         for param in template.init.params.select(name=['qpar', 'qper', 'qiso', 'qap']):
             param.update(prior={'limits': [0.9, 1.1]})
     return template
@@ -415,6 +415,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Y1 mocks full shape')
     parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
     parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
+    parser.add_argument('--only_now', action='store_true', required=False, help='no-wiggle only')
     parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
@@ -432,11 +433,15 @@ if __name__ == '__main__':
     outdir = args.outdir
     tracers = args.tracer
     template_name = args.template
+    only_now_name = args.only_now
     theory_name = args.theory
     observable_name = args.observable
     todo = args.todo
     post = 'post' in args.todo
     rpcut = args.rpcut
+
+    # if only_now_name==True and template_name is not ('bao' or 'bao-qisoqap'):
+    #     raise ValueError('You only can to set --only_now if you want to use the bao or bao-qisoqap template')
 
     nchains = 8
     kw_fn = dict(template_name=template_name, theory_name=theory_name, observable_name=observable_name, rpcut=rpcut)
@@ -457,7 +462,7 @@ if __name__ == '__main__':
             time2 = time.time()
             from desilike.profilers import MinuitProfiler, ScipyProfiler
             likelihood = get_likelihood(compressed=post, tracer=tracer, solve=True)
-            profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn))
+            profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, **kw_fn))
             profiles = profiler.maximize(niterations=10)
             if 'qiso' in template_name:
                 profiles = profiler.interval('qiso')
@@ -465,8 +470,8 @@ if __name__ == '__main__':
 
             profiles.bestfit.choice(input=True)
             observable = likelihood.observables[0]
-            observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
-            profiles.to_stats(fn=samples_fn(outdir, base='profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
+            observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
+            profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
             if profiler.mpicomm.rank == 0:
                 print(profiles.to_stats(tablefmt='pretty'))
             # print out time taken

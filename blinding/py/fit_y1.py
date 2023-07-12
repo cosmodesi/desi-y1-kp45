@@ -9,6 +9,19 @@ if os.path.dirname('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v
 else:
     TheCov_dir = None
 
+if os.path.dirname('/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.1/'):
+    RascalC_dir = '/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.1/' #xi024_BGS_BRIGHT-21.5_GCcomb_0.1_0.4_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt
+else:
+    RascalC_dir = None
+
+TheCov_dir = None
+# RascalC_dir = None
+
+# print("===========================================")
+# print("TheCov_dir:{}".format(TheCov_dir))
+# print("RascalC_dir:{}".format(RascalC_dir))
+# print("===========================================")
+
 def cut_matrix(cov, xcov, ellscov, xlim):
     '''
     The function cuts a matrix based on specified indices and returns the resulting submatrix.
@@ -200,7 +213,12 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('LRG'):
-        zlim = [0.4, 1.1]
+        zlim = [0.6, 0.8]
+        # elif tracer == 'LRGb1': zlim = [0.4, 0.6]
+        # elif tracer == 'LRGb2': zlim = [0.6, 0.8]
+        # elif tracer == 'LRGb3': zlim = [0.8, 1.1]
+        # else:
+        #     raise ValueError('Unknown LRG tracer {}'.format(tracer))
         b0 = 1.7
         smin, kmax = 30., 0.17
         if 'bao' in theory_name: smin, kmax = 40., 0.3
@@ -269,7 +287,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
             param.update(namespace=tracer)  # set namespace for all bias parameters
 
     params = {}
-    data_dir = '/global/cfs/cdirs/desi/users/mpinon/Y1'
+    data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
     if observable_name == 'power':
         data = os.path.join(data_dir, 'pk/pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer, *zlim))
         wmatrix = os.path.join(data_dir, 'pk/wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer, *zlim))
@@ -279,7 +297,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
         observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        data = os.path.join(data_dir, 'smu/allcounts_{}_GCcomb_{}_{}fullonly_default_FKP_lin_njack0_nran4_split20'.format(tracer, *zlim))
+        data = os.path.join(data_dir, 'xi','smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer, *zlim))
         fiber_collisions = None
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
@@ -314,6 +332,19 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
                 kmid = np.arange(kmin + dk/2, kmax + dk/2, dk)
                 cov = cut_matrix(cov, kmid, (0, 2, 4), klim)
                 likelihood.init.update(covariance=cov)
+        elif RascalC_dir is not None:
+            zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
+            covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, *zlim)
+            print(covariance_fn)
+            if os.path.isfile(covariance_fn):
+                cov = np.loadtxt(covariance_fn)
+                print('\nLoading xi024 covariance from {}.\n'.format(covariance_fn))
+                smin, smax, ds = 20., 200., 4.
+                smid = np.arange(smin + ds/2, smax + ds/2, ds)
+                cov = cut_matrix(cov, smid, (0, 2, 4), slim)
+                # print("\n covmat:{}\n".format(cov.shape))
+                likelihood.init.update(covariance=cov)
+
         else:
             if covariance_fn is not None:
                 covariance_fn = covariance_fn.format(tracer, observable_name, theory_name, template_name)

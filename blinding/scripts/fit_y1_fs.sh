@@ -18,7 +18,7 @@ cd $dir_script # go to the directory where the script is
 tracer='LRG'
 template='shapefit'
 theory='velocileptors'
-observable='power'
+observable='corr'
 todo='emulator sampling'
 
 echo 'Running the RSD fitting pipeline'

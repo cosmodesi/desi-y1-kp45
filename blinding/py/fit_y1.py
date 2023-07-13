@@ -213,7 +213,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('LRG'):
-        zlim = [0.6, 0.8]
+        zlim = [0.4, 0.6]
         # elif tracer == 'LRGb1': zlim = [0.4, 0.6]
         # elif tracer == 'LRGb2': zlim = [0.6, 0.8]
         # elif tracer == 'LRGb3': zlim = [0.8, 1.1]
@@ -244,7 +244,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
 
 
 
-def get_observable_likelihood(theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, solve=True, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}.npy'), rpcut=False, refine_cov=True, covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'), cosmo=None, fix_template=False):
+def get_observable_likelihood(theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, solve=True, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), rpcut=False, refine_cov=True, covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'), cosmo=None, fix_template=False):
 
     """Return the power spectrum likelihood, optionally computing the emulator (if ``save_emulator``)."""
 
@@ -252,7 +252,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     from desilike.likelihoods import ObservablesGaussianLikelihood
 
     zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
-    footprint_fn = footprint_fn.format(tracer)
+    footprint_fn = footprint_fn.format(tracer, zlim[0], zlim[1])
     if not os.path.isfile(footprint_fn):
         footprint = get_footprints_from_data(tracer=tracer, region='GCcomb', zlims=[zlim])[0]
         footprint.save(footprint_fn)
@@ -261,7 +261,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     z = footprint.zavg
 
     if emulator_fn is not None:
-        emulator_fn = emulator_fn.format(tracer, observable_name, theory_name, template_name)
+        emulator_fn = emulator_fn.format(tracer, zlim[0], zlim[1], observable_name, theory_name, template_name)
 
     from cosmoprimo.fiducial import DESI
     fiducial = DESI()
@@ -380,18 +380,19 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     return likelihood
 
 
-def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_compressed_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}.npy'), cosmo=None):
+def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_compressed_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), cosmo=None):
 
     """Return the likelihood of compressed parameters, optionally computing the emulator (if ``save_emulator``)."""
 
     from desilike.observables.galaxy_clustering import CutskyFootprint
     from desilike.likelihoods import ObservablesGaussianLikelihood
-
-    footprint_fn = footprint_fn.format(tracer)
+    
+    zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
+    footprint_fn = footprint_fn.format(tracer, zlim[0], zlim[1])
     z = CutskyFootprint.load(footprint_fn).zavg
 
     if emulator_fn is not None:
-        emulator_fn = emulator_fn.format(tracer, observable_name, theory_name, template_name)
+        emulator_fn = emulator_fn.format(tracer, zlim[0], zlim[1], observable_name, theory_name, template_name)
 
     if save_emulator or emulator_fn is None:
         from desilike.samples import Chain
@@ -428,7 +429,8 @@ def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', templ
 
 
 def samples_fn(outdir, base='chain', compressed=False, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, rpcut=False, i=None, outfile_format=None):
-    fn = '_'.join([base, tracer, 'compressed_' + observable_name if compressed else observable_name, theory_name, template_name])
+    zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
+    fn = '_'.join([base, tracer + f'_{zlim[0]}_{zlim[1]}', 'compressed_' + observable_name if compressed else observable_name, theory_name, template_name])
     if rpcut:
         fn += '_rpcut{}'.format(rpcut)
     if i is not None:

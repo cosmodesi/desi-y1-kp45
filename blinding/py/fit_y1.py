@@ -127,10 +127,11 @@ def get_template(template_name='standard', z=0.8, klim=None):
         template = StandardPowerSpectrumTemplate(z=z)
     elif 'shapefit' in template_name:
         template = ShapeFitPowerSpectrumTemplate(z=z, apmode='qisoqap' if 'qisoqap' in template_name else 'qparqper')
-        prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
-        if 'qisoqap' in template_name and prior is not None:
-            for param in template.init.params.select(name=['qap']):
-                param.update(fixed=False, prior=prior)
+        # prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
+        # if 'qisoqap' in template_name and prior is not None:
+        #     1./0.
+        #     for param in template.init.params.select(name=['qap']):
+        #         param.update(fixed=False, prior=prior)
     elif 'wigglesplit' in template_name:
         template = WiggleSplitPowerSpectrumTemplate(z=z)
     elif 'ptt' in template_name:
@@ -315,7 +316,9 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     likelihood()  # to set up k-ranges for the emulator
     #for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
     #    if param.varied: param.update(derived='.auto')
-
+    prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
+    if 'qisoqap' in template_name and prior is not None:
+        likelihood.all_params['qap'].update(prior=dict(dist='norm', loc=1., scale=0.03))
     if save_emulator:  # Compute and save emulator
         from desilike.emulators import Emulator, TaylorEmulatorEngine
         emulator = Emulator(theory.pt, engine=TaylorEmulatorEngine(method='finite', order=4))

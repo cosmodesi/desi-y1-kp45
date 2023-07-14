@@ -126,7 +126,11 @@ def get_template(template_name='standard', z=0.8, klim=None):
     if 'standard' in template_name:
         template = StandardPowerSpectrumTemplate(z=z)
     elif 'shapefit' in template_name:
-        template = ShapeFitPowerSpectrumTemplate(z=z)
+        template = ShapeFitPowerSpectrumTemplate(z=z, apmode='qisoqap' if 'qisoqap' in template_name else 'qparqper')
+        prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
+        if 'qisoqap' in template_name and prior is not None:
+            for param in template.init.params.select(name=['qap']):
+                param.update(fixed=False, prior=prior)
     elif 'wigglesplit' in template_name:
         template = WiggleSplitPowerSpectrumTemplate(z=z)
     elif 'ptt' in template_name:
@@ -234,7 +238,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         klim = {ell: [0.05, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('QSO'):
-        zlim = [0.8, 3.5]
+        zlim = [0.8, 2.1]
         b0 = 1.2
         smin, kmax = 20., 0.25
         if 'bao' in theory_name: smin, kmax = 40., 0.3
@@ -244,7 +248,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
 
 
 
-def get_observable_likelihood(theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, solve=True, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), rpcut=False, refine_cov=True, covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'), cosmo=None, fix_template=False):
+def get_observable_likelihood(theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, solve=True, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), rpcut=False, refine_cov=True, covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'), cosmo=None, fix_template=False):
 
     """Return the power spectrum likelihood, optionally computing the emulator (if ``save_emulator``)."""
 
@@ -332,10 +336,11 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
                 kmid = np.arange(kmin + dk/2, kmax + dk/2, dk)
                 cov = cut_matrix(cov, kmid, (0, 2, 4), klim)
                 likelihood.init.update(covariance=cov)
+            else:
+                raise ValueError('Covariance file {} not found!'.format(covariance_fn))
         elif RascalC_dir is not None:
             zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
             covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, *zlim)
-            print(covariance_fn)
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading xi024 covariance from {}.\n'.format(covariance_fn))
@@ -344,7 +349,8 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
                 cov = cut_matrix(cov, smid, (0, 2, 4), slim)
                 # print("\n covmat:{}\n".format(cov.shape))
                 likelihood.init.update(covariance=cov)
-
+            else:
+                raise ValueError('Covariance file {} not found'.format(covariance_fn))
         else:
             if covariance_fn is not None:
                 covariance_fn = covariance_fn.format(tracer, observable_name, theory_name, template_name)
@@ -447,7 +453,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Y1 mocks full shape')
     parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
-    parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
+    parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'shapefit-qisoqap', 'shapefit-qisoqap-prior' , 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
     parser.add_argument('--only_now', action='store_true', required=False, help='no-wiggle only')
     parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')

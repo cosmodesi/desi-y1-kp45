@@ -316,9 +316,6 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     likelihood()  # to set up k-ranges for the emulator
     #for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
     #    if param.varied: param.update(derived='.auto')
-    prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
-    if 'qisoqap' in template_name and prior is not None:
-        likelihood.all_params['qap'].update(prior=dict(dist='norm', loc=1., scale=0.03))
     if save_emulator:  # Compute and save emulator
         from desilike.emulators import Emulator, TaylorEmulatorEngine
         emulator = Emulator(theory.pt, engine=TaylorEmulatorEngine(method='finite', order=4))
@@ -386,6 +383,9 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     if likelihood.mpicomm.rank == 0:
         likelihood.log_info('Use analytic marginalization for {}.'.format(likelihood.all_params.names(solved=True)))
 
+    prior = {'dist': 'norm', 'loc': 1., 'scale': 0.03} if 'prior' in template_name else None
+    if 'qisoqap' in template_name and prior is not None:
+        likelihood.all_params['qap'].update(prior=dict(dist='norm', loc=1., scale=0.03))
     return likelihood
 
 

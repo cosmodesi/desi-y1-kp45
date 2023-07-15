@@ -5,7 +5,7 @@ import argparse
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
 
 if os.path.dirname('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'):
-    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/v0.1.2/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
+    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
 else:
     TheCov_dir = None
 
@@ -211,14 +211,14 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
     ells = (0, 2, 4)
     if 'bao' in theory_name: ells = (0, 2)
     if tracer.startswith('BGS'):
-        zlim = [0.1, 0.5]
+        zlim = [0.1, 0.4]
         b0 = 1.34
         smin, kmax = 35., 0.15
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('LRG'):
-        zlim = [0.4, 0.6]
+        zlim = [0.8, 1.1]
         # elif tracer == 'LRGb1': zlim = [0.4, 0.6]
         # elif tracer == 'LRGb2': zlim = [0.6, 0.8]
         # elif tracer == 'LRGb3': zlim = [0.8, 1.1]
@@ -232,7 +232,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
 
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('ELG'):
-        zlim = [0.8, 1.6]
+        zlim = [0.8, 1.1]
         b0 = 0.84
         smin, kmax = 25., 0.2
         if 'bao' in theory_name: smin, kmax = 40., 0.3

@@ -2,25 +2,37 @@ import os
 import numpy as np
 import argparse
 
+version = 'v0.6'
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
 
-if os.path.dirname('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'):
-    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/' #cov_gaussian_prerec_{}_{}_{}_{}.npy
+# Checking the existence of directories
+if os.path.exists('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'): # NOTE: this is the directory for the TheCov covariance matrices still version v0.1
+    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'
 else:
     TheCov_dir = None
 
-if os.path.dirname('/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.1/'):
-    RascalC_dir = '/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.1/' #xi024_BGS_BRIGHT-21.5_GCcomb_0.1_0.4_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt
+if os.path.exists('/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)):
+    RascalC_dir = '/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)
 else:
     RascalC_dir = None
 
-TheCov_dir = None
-# RascalC_dir = None
+# Setting the directories to None to force using the alternate directory
+TheCov_dir = None 
+# RascalC_dir = None 
 
-# print("===========================================")
-# print("TheCov_dir:{}".format(TheCov_dir))
-# print("RascalC_dir:{}".format(RascalC_dir))
-# print("===========================================")
+# Error handling if neither directory exists
+if TheCov_dir is None and RascalC_dir is None:
+    raise FileNotFoundError("Both TheCov_dir and RascalC_dir are not found.")
+
+
+base_path = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{}/blinded/'.format(version)
+
+if os.path.exists(base_path):
+    data_dir = base_path
+    catalog_dir = base_path
+else:
+    raise FileNotFoundError(f"The specified directory does not exist: {base_path}")
+    
 
 def cut_matrix(cov, xcov, ellscov, xlim):
     '''
@@ -61,7 +73,7 @@ def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
     from desilike.observables.galaxy_clustering import CutskyFootprint
     from cosmoprimo.fiducial import DESI
 
-    catalog_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/'
+    # catalog_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/'
 
     def select_region(catalog, region):
         mask = catalog.trues()
@@ -110,6 +122,7 @@ def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
     cosmo = DESI()
     footprints = []
     for zlim in zlims:
+        # raise NotImplementedError('Still to test if tuple or list is aproprite.')
         num = int(abs(zlim[1] - zlim[0]) / 0.002 + 0.5)
         bins = np.linspace(*zlim, num=num)
         density = RedshiftDensityInterpolator(z=data['Z'], bins=bins, fsky=fsky, distance=cosmo.comoving_radial_distance, mpicomm=mpicomm)
@@ -211,62 +224,63 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
     ells = (0, 2, 4)
     if 'bao' in theory_name: ells = (0, 2)
     if tracer.startswith('BGS'):
-        zlim = [0.1, 0.4]
+        zbins = [(0.1, 0.4)]
         b0 = 1.34
         smin, kmax = 35., 0.15
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('LRG'):
-        zlim = [0.8, 1.1]
-        # elif tracer == 'LRGb1': zlim = [0.4, 0.6]
-        # elif tracer == 'LRGb2': zlim = [0.6, 0.8]
-        # elif tracer == 'LRGb3': zlim = [0.8, 1.1]
-        # else:
-        #     raise ValueError('Unknown LRG tracer {}'.format(tracer))
+        zbins = [(0.4, 0.6), (0.6, 0.8), (0.8, 1.1)]
         b0 = 1.7
         smin, kmax = 30., 0.17
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
-        # klim = {0: [0.03, kmax, 0.005]} #only monopole (Otavio wanted to test this)
 
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('ELG'):
-        zlim = [0.8, 1.1]
+        zbins = [(0.8, 1.1), (0.8, 1.6), (1.1, 1.6)]
         b0 = 0.84
         smin, kmax = 25., 0.2
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.05, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('QSO'):
-        zlim = [0.8, 2.1]
+        zbins = [(0.8, 2.1)]
         b0 = 1.2
         smin, kmax = 20., 0.25
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
-    return zlim, b0, klim, slim
+    return zbins, b0, klim, slim
 
 
 
-def get_observable_likelihood(theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, solve=True, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), rpcut=False, refine_cov=True, covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'), cosmo=None, fix_template=False):
+def get_observable_likelihood(theory_name='velocileptors', 
+                              template_name='shapefit',
+                              observable_name='power',
+                              tracer=None, zlim=None,solve=True, save_emulator=False,
+                              emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_{}_{}_{}.npy'),
+                              footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'),
+                              rpcut=False, refine_cov=True,
+                              covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'),
+                              cosmo=None, fix_template=False):
 
     """Return the power spectrum likelihood, optionally computing the emulator (if ``save_emulator``)."""
 
     from desilike.observables.galaxy_clustering import TracerPowerSpectrumMultipolesObservable, TracerCorrelationFunctionMultipolesObservable, ObservablesCovarianceMatrix, CutskyFootprint
     from desilike.likelihoods import ObservablesGaussianLikelihood
 
-    zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
-    footprint_fn = footprint_fn.format(tracer, zlim[0], zlim[1])
+    footprint_fn = footprint_fn.format(tracer,  zlim[0], zlim[1])
     if not os.path.isfile(footprint_fn):
-        footprint = get_footprints_from_data(tracer=tracer, region='GCcomb', zlims=[zlim])[0]
+        footprint = get_footprints_from_data(tracer=tracer, region='GCcomb', zlims=[zlim])[0] #WARNING: region is hardcoded to GCcomb
         footprint.save(footprint_fn)
     else:
         footprint = CutskyFootprint.load(footprint_fn)
     z = footprint.zavg
 
     if emulator_fn is not None:
-        emulator_fn = emulator_fn.format(tracer, zlim[0], zlim[1], observable_name, theory_name, template_name)
+        emulator_fn = emulator_fn.format(tracer,  zlim[0], zlim[1], observable_name, theory_name, template_name)
 
     from cosmoprimo.fiducial import DESI
     fiducial = DESI()
@@ -292,17 +306,18 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
             param.update(namespace=tracer)  # set namespace for all bias parameters
 
     params = {}
-    data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
+    # data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
+
     if observable_name == 'power':
-        data = os.path.join(data_dir, 'pk/pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer, *zlim))
-        wmatrix = os.path.join(data_dir, 'pk/wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer, *zlim))
+        data = os.path.join(data_dir, 'pk', 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+        wmatrix = os.path.join(data_dir, 'pk', 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
             wmatrix += '_rpcut{}'.format(rpcut)
         observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        data = os.path.join(data_dir, 'xi','smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer, *zlim))
+        data = os.path.join(data_dir, 'xi','smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
         fiber_collisions = None
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
@@ -326,9 +341,9 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     
     if refine_cov:
         if TheCov_dir is not None:
-            region = 'NGCSGCcomb'
-            zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
-            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_{}_{}_{}.txt'.format(tracer, region, zlim[0], zlim[1])
+            region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
+
+            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_{}_{}_{}.txt'.format(tracer, region,  zlim[0], zlim[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading Pk covariance from {}.\n'.format(covariance_fn))
@@ -339,8 +354,7 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
             else:
                 raise ValueError('Covariance file {} not found!'.format(covariance_fn))
         elif RascalC_dir is not None:
-            zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
-            covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, *zlim)
+            covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim[0], zlim[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading xi024 covariance from {}.\n'.format(covariance_fn))
@@ -358,13 +372,24 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
                 likelihood.init.update(covariance=np.load(covariance_fn))
             else:
                 template_name_pk, theory_name_pk, observable_name_pk = 'shapefit', 'velocileptors', 'power'
-                likelihood_pk = get_observable_likelihood(theory_name=theory_name_pk, template_name=template_name_pk, observable_name=observable_name_pk, tracer=tracer, solve=solve, save_emulator=False, rpcut=rpcut, refine_cov=False, fix_template=True)
+                likelihood_pk = get_observable_likelihood(theory_name=theory_name_pk,
+                                                          template_name=template_name_pk,
+                                                          observable_name=observable_name_pk,
+                                                          tracer=tracer,
+                                                          solve=solve, 
+                                                          save_emulator=False,
+                                                          rpcut=rpcut,
+                                                          refine_cov=False,
+                                                          fix_template=True)
                 from desilike.profilers import MinuitProfiler
                 profiler = MinuitProfiler(likelihood_pk, seed=42)
                 profiles = profiler.maximize(niterations=10)
                 if profiler.mpicomm.rank == 0:
                     print(profiles.to_stats(tablefmt='pretty'))
-                cov = ObservablesCovarianceMatrix(observable, footprints=footprint, theories=[likelihood_pk.observables[0].wmatrix.theory], resolution=5)(**profiles.bestfit.choice(input=True))
+                cov = ObservablesCovarianceMatrix(observable,
+                                                  footprints=footprint,
+                                                  theories=[likelihood_pk.observables[0].wmatrix.theory],
+                                                  resolution=5)(**profiles.bestfit.choice(input=True))
                 if covariance_fn is not None:
                     np.save(covariance_fn, cov)
                 likelihood.init.update(covariance=cov)
@@ -389,14 +414,22 @@ def get_observable_likelihood(theory_name='velocileptors', template_name='shapef
     return likelihood
 
 
-def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, save_emulator=False, emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_compressed_{}_{}_{}.npy'), footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'), cosmo=None):
+def get_compressed_likelihood(chains_fn=None,
+                              theory_name='velocileptors',
+                              template_name='shapefit',
+                              observable_name='power',
+                              tracer=None,
+                              zlim=None,
+                              save_emulator=False,
+                              emulator_fn=os.path.join(emulators_dir, '{}_{}_{}_compressed_{}_{}_{}.npy'),
+                              footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'),
+                              cosmo=None):
 
     """Return the likelihood of compressed parameters, optionally computing the emulator (if ``save_emulator``)."""
 
     from desilike.observables.galaxy_clustering import CutskyFootprint
     from desilike.likelihoods import ObservablesGaussianLikelihood
-    
-    zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
+
     footprint_fn = footprint_fn.format(tracer, zlim[0], zlim[1])
     z = CutskyFootprint.load(footprint_fn).zavg
 
@@ -437,16 +470,26 @@ def get_compressed_likelihood(chains_fn=None, theory_name='velocileptors', templ
     return likelihood
 
 
-def samples_fn(outdir, base='chain', compressed=False, theory_name='velocileptors', template_name='shapefit', observable_name='power', tracer=None, rpcut=False, i=None, outfile_format=None):
-    zlim, b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)
-    fn = '_'.join([base, tracer + f'_{zlim[0]}_{zlim[1]}', 'compressed_' + observable_name if compressed else observable_name, theory_name, template_name])
+def samples_fn(outdir,
+               base='chain',
+               compressed=False,
+               theory_name='velocileptors',
+               template_name='shapefit',
+               observable_name='power',
+               tracer=None,
+               zlim=None,
+               rpcut=False,
+               i=None,
+               outfile_format=None):
+    
+    zmin, zmax = zlim
+    fn = '_'.join([base, tracer + f'_{zmin}_{zmax}', 'compressed_' + observable_name if compressed else observable_name, theory_name, template_name])
     if rpcut:
         fn += '_rpcut{}'.format(rpcut)
     if i is not None:
         fn += '_{:d}'.format(i)
     fn += '.npy' if outfile_format is None else '.' + outfile_format
     return os.path.join(outdir, fn)
-
 
 
 if __name__ == '__main__':
@@ -462,7 +505,7 @@ if __name__ == '__main__':
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
     parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape'), help='Where to save results')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/{}'.format(version)), help='Where to save results')
     args = parser.parse_args()
 
     from desilike import setup_logging
@@ -482,83 +525,100 @@ if __name__ == '__main__':
     post = 'post' in args.todo
     rpcut = args.rpcut
 
-    # if only_now_name==True and template_name is not ('bao' or 'bao-qisoqap'):
-    #     raise ValueError('You only can to set --only_now if you want to use the bao or bao-qisoqap template')
+    # Explicitly print all the selected settings at the beginning
+    print(f"Starting analysis with the following settings:")
+    print(f"Tracer: {args.tracer}")
+    print(f"Template: {args.template}")
+    print(f"Only Now: {'Yes' if args.only_now else 'No'}")
+    print(f"Theory: {args.theory}")
+    print(f"Observable: {args.observable}")
+    print(f"RP Cut: {args.rpcut if args.rpcut is not None else 'No cut specified'}")
+    print(f"Tasks to Perform: {', '.join(args.todo)}")
+    print(f"Output Directory: {args.outdir}")
+
+    if only_now_name==True and template_name not in ('bao', 'bao-qisoqap'):
+        raise ValueError('The --only_now argument can only be used with the bao or bao-qisoqap templates.')
 
     nchains = 8
     kw_fn = dict(template_name=template_name, theory_name=theory_name, observable_name=observable_name, rpcut=rpcut)
     
-    def get_likelihood(compressed=False, tracer='LRG', **kwargs):
+    def get_likelihood(compressed=False, tracer='LRG', zlim=None, *args, **kwargs):
+        print(f"zlim: {zlim}")
         if compressed:
-            chains_fn = [samples_fn(outdir, i=i, base='chain', tracer=tracer, **kw_fn) for i in range(nchains)]
-            return get_compressed_likelihood(chains_fn, tracer=tracer, **kw_fn, **kwargs)
-        return get_observable_likelihood(tracer=tracer, **kw_fn, **kwargs)
+            chains_fn = [samples_fn(outdir, i=i, base='chain', tracer=tracer, zlim=zlim, **kw_fn) for i in range(nchains)]
+            return get_compressed_likelihood(chains_fn, tracer=tracer, zlim=zlim, **kw_fn, **kwargs)
+        return get_observable_likelihood(tracer=tracer, zlim=zlim, *args, **kw_fn, **kwargs)
     
     for tracer in tracers:
+        zbins = get_fit_setup(tracer, theory_name=theory_name)[0] # this is zlim, b0, klim, slim - This defined fit_setup as a global variable scope.
 
-        if 'emulator' in todo:
-            likelihood = get_likelihood(compressed=post, tracer=tracer, save_emulator=True)
-            likelihood.mpicomm.barrier()  # just to wait all processes are done
+        for zlim in zbins:
+            print(f'\ntracer = {tracer}, zlim = {zlim}\n')
+            b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)[1:4]           
 
-        if 'profiling' in todo:
-            time2 = time.time()
-            from desilike.profilers import MinuitProfiler, ScipyProfiler
-            likelihood = get_likelihood(compressed=post, tracer=tracer, solve=True)
-            profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, **kw_fn))
-            profiles = profiler.maximize(niterations=10)
-            if 'qiso' in template_name:
-                profiles = profiler.interval('qiso')
-                profiles = profiler.profile('qiso')
+            if 'emulator' in todo:
+                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, save_emulator=True)
+                likelihood.mpicomm.barrier()  # just to wait all processes are done
 
-            profiles.bestfit.choice(input=True)
-            observable = likelihood.observables[0]
-            observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
-            profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, **kw_fn, outfile_format='stats'))
-            if profiler.mpicomm.rank == 0:
-                print(profiles.to_stats(tablefmt='pretty'))
-            # print out time taken
-            print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
+            if 'profiling' in todo:
+                time2 = time.time()
+                from desilike.profilers import MinuitProfiler, ScipyProfiler
+                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, solve=True)
+                profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn))
+                profiles = profiler.maximize(niterations=10)
+                if 'qiso' in template_name:
+                    profiles = profiler.interval('qiso')
+                    profiles = profiler.profile('qiso')
 
-        if 'sampling' in todo:
-            # start timer for this if statement
-            from desilike.samples import Chain, plotting
-            time1 = time.time()
-            # set up the likelihood
-            likelihood = get_likelihood(compressed=post, tracer=tracer)
-            save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
-            chains = nchains
-            sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
-            sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
-            chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
-            likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters
-            likelihood.observables[0].plot(show=True)
-            observable = likelihood.observables[0]
-            observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, **kw_fn, outfile_format='png'))
-            # print out time taken
-            print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
+                profiles.bestfit.choice(input=True)
+                observable = likelihood.observables[0]
+                observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='stats'))
+                if profiler.mpicomm.rank == 0:
+                    print(profiles.to_stats(tablefmt='pretty'))
+                # print out time taken
+                print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
 
-    if 'inference' in todo:
-        likelihood = sum(get_likelihood(compressed='direct' not in template_name, tracer=tracer) for tracer in tracers)
-        for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
-            if param.varied: param.update(derived='.auto')
-        chains = nchains
-        save_fn = [os.path.join(outdir, 'chain_{}_{:d}.npy'.format('_'.join(tracers), ichain)) for ichain in range(nchains)]
-        # To restart:
-        chains = save_fn
-        sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
-        sampler.run(check={'max_eigen_gr': 0.02})
+            if 'sampling' in todo:
+                # start timer for this if statement
+                from desilike.samples import Chain, plotting
+                time1 = time.time()
+                # set up the likelihood
+                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim)
+                save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
+                chains = nchains
+                sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
+                sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
+                chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, zlim=zlim, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
+                likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters
+                likelihood.observables[0].plot(show=True)
+                observable = likelihood.observables[0]
+                observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                # print out time taken
+                print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
 
-    Likelihoods = [get_observable_likelihood] * len(tracers)
-    name_like = ['DESIFullShape{}{}Likelihood'.format(template_name.capitalize(), tracer) for tracer in tracers]
-    kw_like = []
-    for tracer in tracers:
-        kw = {'tracer': tracer, 'theory_name': theory_name, 'template_name': template_name, 'observable_name': observable_name, 'cosmo': 'external'}
-        kw_like.append(kw)
-    if 'bindings' in todo:
-        setup_logging('info')
-        overwrite = True
-        CobayaLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
-        CosmoSISLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
-        MontePythonLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+            if 'inference' in todo:
+                likelihood = sum(get_likelihood(compressed='direct' not in template_name, tracer=tracer, zlim=zlim) for tracer in tracers)
+                for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
+                    if param.varied: param.update(derived='.auto')
+                chains = nchains
+                save_fn = [os.path.join(outdir, 'chain_{}_{:d}.npy'.format('_'.join(tracers), ichain)) for ichain in range(nchains)]
+                # To restart:
+                chains = save_fn
+                sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
+                sampler.run(check={'max_eigen_gr': 0.02})
+
+            Likelihoods = [get_observable_likelihood] * len(tracers)
+            name_like = ['DESIFullShape{}{}Likelihood'.format(template_name.capitalize(), tracer) for tracer in tracers]
+            kw_like = []
+            for tracer in tracers:
+                kw = {'tracer': tracer, 'theory_name': theory_name, 'template_name': template_name, 'observable_name': observable_name, 'cosmo': 'external'}
+                kw_like.append(kw)
+            if 'bindings' in todo:
+                setup_logging('info')
+                overwrite = True
+                CobayaLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+                CosmoSISLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+                MontePythonLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
 
     print(f'## total time taken: {(time.time() - time0) / 60:.2f} mins')

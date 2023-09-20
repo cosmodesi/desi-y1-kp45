@@ -238,7 +238,40 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         slim = {ell: [smin, 150., 4.] for ell in ells}
     return zbins, b0, klim, slim
 
+def get_blind_cosmo(z, tracer, *args, **kwargs):
+    """
+    This function returns a dictionary of cosmological parameters with blinded parameters if specified.
 
+    Parameters
+    ----------
+    z : float
+        Redshift at which to evaluate `qpar`, `qper`, `df`.
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
+
+    Returns
+    -------
+    cosmo : dict
+        A dictionary containing the values of `qpar`, `qper`, `df`, and `dm`.
+    """
+    blinded = 'unblinded' not in blinded_parameters
+
+    from cosmoprimo.fiducial import DESI
+    cosmo = fiducial = DESI()
+
+    if blinded:
+        fn = os.path.join(blinded_parameters,'blinded_parameters_{}.csv'.format(tracer))
+        print('\nLoad blinded_parameters from: \n', fn)
+        w0_blind, wa_blind, f_blind = np.loadtxt(fn, delimiter=',', skiprows=1)
+        cosmo = fiducial.clone(w0_fld=w0_blind, wa_fld=wa_blind)
+
+        qpar = cosmo.efunc(z) / fiducial.efunc(z)
+        qper = fiducial.comoving_angular_distance(z) / cosmo.comoving_angular_distance(z)
+        df = f_blind / cosmo.growth_rate(z)
+    else:
+        qpar = qper = df = 1.
+    print('Expected blinding:\nqpar_th:{} \nqper_th:{} \ndf_th:{}'.format(qpar, qper, df))
+    return dict(qpar=qpar, qper=qper, df=df, dm=0.)
 
 def get_observable_likelihood(theory_name='velocileptors', 
                               template_name='shapefit',
@@ -269,6 +302,7 @@ def get_observable_likelihood(theory_name='velocileptors',
     from cosmoprimo.fiducial import DESI
     fiducial = DESI()
     b1E = b0 / fiducial.growth_factor(z)
+    expected = get_blind_cosmo(z, tracer)
 
     # Load theory
     theory = get_theory(theory_name=theory_name, observable_name=observable_name, template=None, b1E=b1E, ells=klim.keys())
@@ -289,6 +323,7 @@ def get_observable_likelihood(theory_name='velocileptors',
         if param not in template.params:
             param.update(namespace=tracer)  # set namespace for all bias parameters
 
+    expected = {name: value for name, value in expected.items() if name in template.params}
     params = {}
     # pk_xi_dir_blinded = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
@@ -609,9 +644,11 @@ if __name__ == '__main__':
     if blind_cosmology_tests_paths is not None:
         pk_xi_dir_blinded_list = []
         catalogs_dir_blinded_list = []
+        blinded_parameters_list = []
         for blind_cosmology_test_path in blind_cosmology_tests_paths:
             pk_xi_dir_blinded_list.append(f"{blind_cosmology_test_path}/pk_xi")
             catalogs_dir_blinded_list.append(f"{blind_cosmology_test_path}/LSScats")
+            blinded_parameters_list.append(f"{blind_cosmology_test_path}/blinded_parameters")
 
             # Additional check to ensure the constructed paths exist
             if not os.path.exists(pk_xi_dir_blinded_list[-1]) or not os.path.exists(catalogs_dir_blinded_list[-1]):
@@ -629,15 +666,16 @@ if __name__ == '__main__':
             return get_compressed_likelihood(chains_fn, tracer=tracer, zlim=zlim, **kw_fn, **kwargs)
         return get_observable_likelihood(tracer=tracer, zlim=zlim, blinded_index=blinded_index, *args, **kw_fn, **kwargs)
     
+    # Loop over all the blind cosmology tests; default is unblinded
     blinded_index = 0
-    for blind_cosmology_test_path, pk_xi_dir_blinded, catalogs_dir_blinded in zip(blind_cosmology_tests_paths, pk_xi_dir_blinded_list, catalogs_dir_blinded_list):
+    blinded_parameters = 'unblinded'
+    for blind_cosmology_test_path, pk_xi_dir_blinded, catalogs_dir_blinded, blinded_parameters in zip(blind_cosmology_tests_paths, pk_xi_dir_blinded_list, catalogs_dir_blinded_list, blinded_parameters_list):
         print(f"\n\nStarting analysis for blind cosmology test: {blind_cosmology_test_path}\n\n")
         blinded_index += 1  
-        pk_xi_dir_blinded = pk_xi_dir_blinded
-        catalogs_dir_blinded = catalogs_dir_blinded
         print(f"blind_index: {blinded_index}")
         print(f"pk_xi_dir_blinded: {pk_xi_dir_blinded}")
         print(f"catalogs_dir_blinded: {catalogs_dir_blinded}")
+        print(f"blinded_parameters: {blinded_parameters}")
         print()
 
 

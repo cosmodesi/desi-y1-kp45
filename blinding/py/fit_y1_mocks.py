@@ -2,37 +2,22 @@ import os
 import numpy as np
 import argparse
 
-version = 'v0.6'
+import yaml
+
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
 
-# Checking the existence of directories
-if os.path.exists('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'): # NOTE: this is the directory for the TheCov covariance matrices still version v0.1
-    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'
-else:
-    TheCov_dir = None
+def load_config(path):
+    """Load the configuration from a YAML file.
 
-if os.path.exists('/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)):
-    RascalC_dir = '/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)
-else:
-    RascalC_dir = None
+    Args:
+        path (str): The path to the YAML configuration file.
 
-# Setting the directories to None to force using the alternate directory
-TheCov_dir = None 
-# RascalC_dir = None 
-
-# Error handling if neither directory exists
-if TheCov_dir is None and RascalC_dir is None:
-    raise FileNotFoundError("Both TheCov_dir and RascalC_dir are not found.")
-
-
-base_path = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{}/blinded/'.format(version)
-
-if os.path.exists(base_path):
-    data_dir = base_path
-    catalog_dir = base_path
-else:
-    raise FileNotFoundError(f"The specified directory does not exist: {base_path}")
-    
+    Returns:
+        dict: The configuration data.
+    """
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
+  
 
 def cut_matrix(cov, xcov, ellscov, xlim):
     '''
@@ -73,7 +58,7 @@ def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
     from desilike.observables.galaxy_clustering import CutskyFootprint
     from cosmoprimo.fiducial import DESI
 
-    # catalog_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/'
+    # catalogs_dir_blinded = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/'
 
     def select_region(catalog, region):
         mask = catalog.trues()
@@ -96,8 +81,8 @@ def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
             randoms['WEIGHT'] *= alpha
         return Catalog.concatenate(list_data), Catalog.concatenate(list_randoms)
 
-    data_fns = [os.path.join(catalog_dir, '{}_{}_clustering.dat.fits'.format(tracer, reg)) for reg in ['NGC', 'SGC']]
-    randoms_fns = [os.path.join(catalog_dir, '{}_{}_0_clustering.ran.fits'.format(tracer, reg)) for reg in ['NGC', 'SGC']]
+    data_fns = [os.path.join(catalogs_dir_blinded, '{}_{}_clustering.dat.fits'.format(tracer, reg)) for reg in ['NGC', 'SGC']]
+    randoms_fns = [os.path.join(catalogs_dir_blinded, '{}_{}_0_clustering.ran.fits'.format(tracer, reg)) for reg in ['NGC', 'SGC']]
     data_NSGC = [Catalog.read(fn) for fn in data_fns]
     randoms_NSGC = [Catalog.read(fn) for fn in randoms_fns]
 
@@ -122,7 +107,6 @@ def get_footprints_from_data(tracer='ELG', region='GCcomb', zlims=()):
     cosmo = DESI()
     footprints = []
     for zlim in zlims:
-        # raise NotImplementedError('Still to test if tuple or list is aproprite.')
         num = int(abs(zlim[1] - zlim[0]) / 0.002 + 0.5)
         bins = np.linspace(*zlim, num=num)
         density = RedshiftDensityInterpolator(z=data['Z'], bins=bins, fsky=fsky, distance=cosmo.comoving_radial_distance, mpicomm=mpicomm)
@@ -254,7 +238,40 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
         slim = {ell: [smin, 150., 4.] for ell in ells}
     return zbins, b0, klim, slim
 
+def get_blind_cosmo(z, tracer, *args, **kwargs):
+    """
+    This function returns a dictionary of cosmological parameters with blinded parameters if specified.
 
+    Parameters
+    ----------
+    z : float
+        Redshift at which to evaluate `qpar`, `qper`, `df`.
+    tracer : str
+        The tracer ("LRG", "ELG", or "QSO").
+
+    Returns
+    -------
+    cosmo : dict
+        A dictionary containing the values of `qpar`, `qper`, `df`, and `dm`.
+    """
+    blinded = 'unblinded' not in blinded_parameters
+
+    from cosmoprimo.fiducial import DESI
+    cosmo = fiducial = DESI()
+
+    if blinded:
+        fn = os.path.join(blinded_parameters,'blinded_parameters_{}.csv'.format(tracer))
+        print('\nLoad blinded_parameters from: \n', fn)
+        w0_blind, wa_blind, f_blind = np.loadtxt(fn, delimiter=',', skiprows=1)
+        cosmo = fiducial.clone(w0_fld=w0_blind, wa_fld=wa_blind)
+
+        qpar = cosmo.efunc(z) / fiducial.efunc(z)
+        qper = fiducial.comoving_angular_distance(z) / cosmo.comoving_angular_distance(z)
+        df = f_blind / cosmo.growth_rate(z)
+    else:
+        qpar = qper = df = 1.
+    print('Expected blinding:\nqpar_th:{} \nqper_th:{} \ndf_th:{}'.format(qpar, qper, df))
+    return dict(qpar=qpar, qper=qper, df=df, dm=0.)
 
 def get_observable_likelihood(theory_name='velocileptors', 
                               template_name='shapefit',
@@ -264,7 +281,7 @@ def get_observable_likelihood(theory_name='velocileptors',
                               footprint_fn=os.path.join(emulators_dir, 'footprint_{}_{}_{}.npy'),
                               rpcut=False, refine_cov=True,
                               covariance_fn=os.path.join(emulators_dir, 'covariance_{}_{}_{}_{}.npy'),
-                              cosmo=None, fix_template=False):
+                              cosmo=None, fix_template=False, blinded_index=0):
 
     """Return the power spectrum likelihood, optionally computing the emulator (if ``save_emulator``)."""
 
@@ -285,6 +302,7 @@ def get_observable_likelihood(theory_name='velocileptors',
     from cosmoprimo.fiducial import DESI
     fiducial = DESI()
     b1E = b0 / fiducial.growth_factor(z)
+    expected = get_blind_cosmo(z, tracer)
 
     # Load theory
     theory = get_theory(theory_name=theory_name, observable_name=observable_name, template=None, b1E=b1E, ells=klim.keys())
@@ -305,19 +323,38 @@ def get_observable_likelihood(theory_name='velocileptors',
         if param not in template.params:
             param.update(namespace=tracer)  # set namespace for all bias parameters
 
+    expected = {name: value for name, value in expected.items() if name in template.params}
     params = {}
-    # data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
+    # pk_xi_dir_blinded = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
     if observable_name == 'power':
-        data = os.path.join(data_dir, 'pk', 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
-        wmatrix = os.path.join(data_dir, 'pk', 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+        region_ = 'NScomb' # hardcoded
+        data = os.path.join(pk_xi_dir_blinded, 'pk', f'pkpoles_{tracer}_{region_}_{zlim[0]}_{zlim[1]}_default_lin')  # WARNING: no FKP weights [there is current no FKP weights for the pkpoles files]
+        print("\n/!\  WARNING: no FKP weights for the pkpoles files  /!\ \n")
+        
+        wmatrix_path = os.path.join(pk_xi_dir_blinded, 'pk', f'wmatrix_smooth_{tracer}_{region_}_{zlim[0]}_{zlim[1]}_default_lin.npy')  # WARNING: no FKP weights
+        
+        if os.path.isfile(wmatrix_path):
+            wmatrix = wmatrix_path
+            print("====================LOADING WINDOW MATRIX====================\n")
+        else:
+            print("\n/!\  WARNING: no window matrix; going without it  /!\ \n")
+            wmatrix = None
+        
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
             wmatrix += '_rpcut{}'.format(rpcut)
-        observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
+
+        observable = TracerPowerSpectrumMultipolesObservable(klim=klim,
+                                                             data=data + '.npy', 
+                                                             wmatrix=wmatrix, 
+                                                             kinlim=(0.005, 0.35), 
+                                                             kinrebin=5, 
+                                                             theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        data = os.path.join(data_dir, 'xi','smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
+        region_ = 'NScomb' # hardcoded
+        data = os.path.join(pk_xi_dir_blinded, 'xi','smu/allcounts_{}_{}_{}_{}_default_lin_njack0_nran1_split20'.format(tracer, region_, zlim[0], zlim[1]))
         fiber_collisions = None
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
@@ -341,9 +378,11 @@ def get_observable_likelihood(theory_name='velocileptors',
     
     if refine_cov:
         if TheCov_dir is not None:
-            region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
-
-            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_{}_{}_{}.txt'.format(tracer, region,  zlim[0], zlim[1])
+            # Those are hardcoded because they are hardcoded in the covariance files and there is no ohter covartiance option
+            region_ = 'NScomb' # hardcoded
+            zlim_ = (0.4, 1.1) # hardcoded 
+            # blinded_index [0 1 2 3 4 5 6 7 8] zero is unblinded
+            covariance_fn = TheCov_dir + 'CovGaussian_Pk_0_{}_{}_zmin{}_zmax{}_{}.txt'.format(tracer, region_, zlim_[0], zlim_[1], blinded_index)
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading Pk covariance from {}.\n'.format(covariance_fn))
@@ -354,7 +393,9 @@ def get_observable_likelihood(theory_name='velocileptors',
             else:
                 raise ValueError('Covariance file {} not found!'.format(covariance_fn))
         elif RascalC_dir is not None:
-            covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim[0], zlim[1])
+            region_ = 'NScomb' # hardcoded
+            zlim_ = (0.4, 1.1) # hardcoded [there is no other option for redshifts in RascalC; also only has the blinded cosmology test_w0-0.970439944958287_wa-0.507777992481059 option] 
+            covariance_fn = RascalC_dir + 'xi024_test_w0-0.970439944958287_wa-0.507777992481059_{}_{}_{}_{}_default_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, region_, zlim_[0], zlim_[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading xi024 covariance from {}.\n'.format(covariance_fn))
@@ -495,6 +536,45 @@ def samples_fn(outdir,
 if __name__ == '__main__':
     import time
     time0 = time.time()
+    
+    # Specify the path to your config.yaml file
+    config_file_path = "/global/homes/u/uendert/desi-y1-kp45/blinding/py/config.yaml"
+
+    # Load the configuration file
+    config = load_config(config_file_path)
+
+    # Main directory holding the UNBLINDED catalog data
+    main_catalog_path = config['directories']['catalogs']['main']
+
+    # Directory where the UNBLINDED pk_xi data is stored
+    pk_xi_unblinded_path = config['directories']['pk_xi']['unblinded']
+
+    # List of directories for different blind cosmology test cases
+    blind_cosmology_tests_paths = config['directories']['catalogs']['blind_cosmology_tests']
+
+    # Path to the RascalC tool directory
+    rascal_path = config['directories']['external_tools']['rascal']
+
+    # Path to the directory where the covariance matrix data is stored
+    thecov_path = config['directories']['external_tools']['thecov']
+
+    # Print all the configuration values
+    print(f"\nLoaded Configuration from: {config_file_path}")
+    print("\nPrint all the configuration values:")
+
+    print("Directories:")
+    print("  Catalogs:")
+    print(f"    - Main: {config['directories']['catalogs']['main']}")
+    print("    - Blind Cosmology Tests:")
+    for path in config['directories']['catalogs']['blind_cosmology_tests']:
+        print(f"      - {path}")
+
+    print("\n  PK_XI:")
+    print(f"    - Unblinded: {config['directories']['pk_xi']['unblinded']}\n")
+
+    print("  External Tools:")
+    print(f"    - Thecov: {config['directories']['external_tools']['thecov']}\n")
+    print(f"    - Rascal: {config['directories']['external_tools']['rascal']}")
 
     import argparse
     parser = argparse.ArgumentParser(description='Y1 mocks full shape')
@@ -505,7 +585,8 @@ if __name__ == '__main__':
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
     parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/{}'.format(version)), help='Where to save results')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/test/'), help='Where to save results')
+    # parser.add_argument('--blind_cosmology_dir', type=str, nargs='*', help='directory with blinded cosmology, catalogs and measurements', default=[path.split('/')[-1] for path in config['directories']['catalogs']['blind_cosmology_tests']])
     args = parser.parse_args()
 
     from desilike import setup_logging
@@ -524,6 +605,7 @@ if __name__ == '__main__':
     todo = args.todo
     post = 'post' in args.todo
     rpcut = args.rpcut
+    # blind_cosmology_tests_paths = args.blind_cosmology_dir
 
     # Explicitly print all the selected settings at the beginning
     print(f"Starting analysis with the following settings:")
@@ -538,87 +620,135 @@ if __name__ == '__main__':
 
     if only_now_name==True and template_name not in ('bao', 'bao-qisoqap'):
         raise ValueError('The --only_now argument can only be used with the bao or bao-qisoqap templates.')
+    
+    # Checking the existence of directories
+    if observable_name == 'power': # NOTE: this is the directory for the TheCov covariance matrices still version v0.1
+        TheCov_dir = thecov_path
+    else:
+        TheCov_dir = None
+
+    if observable_name == 'corr':
+        RascalC_dir = rascal_path
+    else:
+        RascalC_dir = None
+    
+    print("theCov_dir: ", TheCov_dir)
+    print("RascalC_dir: ", RascalC_dir)
+
+    # Error handling if neither directory exists
+    if TheCov_dir is None and RascalC_dir is None:
+        raise FileNotFoundError("Both TheCov_dir and RascalC_dir are not found.")
+    if TheCov_dir is not None and RascalC_dir is not None:
+        raise FileNotFoundError("Both TheCov_dir and RascalC_dir are found. Please specify only one.")
+
+    if blind_cosmology_tests_paths is not None:
+        pk_xi_dir_blinded_list = []
+        catalogs_dir_blinded_list = []
+        blinded_parameters_list = []
+        for blind_cosmology_test_path in blind_cosmology_tests_paths:
+            pk_xi_dir_blinded_list.append(f"{blind_cosmology_test_path}/pk_xi")
+            catalogs_dir_blinded_list.append(f"{blind_cosmology_test_path}/LSScats")
+            blinded_parameters_list.append(f"{blind_cosmology_test_path}/blinded_parameters")
+
+            # Additional check to ensure the constructed paths exist
+            if not os.path.exists(pk_xi_dir_blinded_list[-1]) or not os.path.exists(catalogs_dir_blinded_list[-1]):
+                raise FileNotFoundError(f"The constructed directories do not exist: {pk_xi_dir_blinded_list[-1]}, {catalogs_dir_blinded_list[-1]}")
+    else:
+        raise FileNotFoundError(f"The specified directory does not exist: {blind_cosmology_tests_paths}")
+
 
     nchains = 8
     kw_fn = dict(template_name=template_name, theory_name=theory_name, observable_name=observable_name, rpcut=rpcut)
     
-    def get_likelihood(compressed=False, tracer='LRG', zlim=None, *args, **kwargs):
-        print(f"zlim: {zlim}")
+    def get_likelihood(compressed=False, tracer='LRG', zlim=None, blinded_index=0,  *args, **kwargs):
         if compressed:
             chains_fn = [samples_fn(outdir, i=i, base='chain', tracer=tracer, zlim=zlim, **kw_fn) for i in range(nchains)]
             return get_compressed_likelihood(chains_fn, tracer=tracer, zlim=zlim, **kw_fn, **kwargs)
-        return get_observable_likelihood(tracer=tracer, zlim=zlim, *args, **kw_fn, **kwargs)
+        return get_observable_likelihood(tracer=tracer, zlim=zlim, blinded_index=blinded_index, *args, **kw_fn, **kwargs)
     
-    for tracer in tracers:
-        zbins = get_fit_setup(tracer, theory_name=theory_name)[0] # this is zlim, b0, klim, slim - This defined fit_setup as a global variable scope.
+    # Loop over all the blind cosmology tests; default is unblinded
+    blinded_index = 0
+    blinded_parameters = 'unblinded'
+    for blind_cosmology_test_path, pk_xi_dir_blinded, catalogs_dir_blinded, blinded_parameters in zip(blind_cosmology_tests_paths, pk_xi_dir_blinded_list, catalogs_dir_blinded_list, blinded_parameters_list):
+        print(f"\n\nStarting analysis for blind cosmology test: {blind_cosmology_test_path}\n\n")
+        blinded_index += 1  
+        print(f"blind_index: {blinded_index}")
+        print(f"pk_xi_dir_blinded: {pk_xi_dir_blinded}")
+        print(f"catalogs_dir_blinded: {catalogs_dir_blinded}")
+        print(f"blinded_parameters: {blinded_parameters}")
+        print()
 
-        for zlim in zbins:
-            print(f'\ntracer = {tracer}, zlim = {zlim}\n')
-            b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)[1:4]           
 
-            if 'emulator' in todo:
-                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, save_emulator=True)
-                likelihood.mpicomm.barrier()  # just to wait all processes are done
+        for tracer in tracers:
+            zbins = get_fit_setup(tracer, theory_name=theory_name)[0] # this is zlim, b0, klim, slim - This defined fit_setup as a global variable scope.
 
-            if 'profiling' in todo:
-                time2 = time.time()
-                from desilike.profilers import MinuitProfiler, ScipyProfiler
-                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, solve=True)
-                profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn))
-                profiles = profiler.maximize(niterations=10)
-                if 'qiso' in template_name:
-                    profiles = profiler.interval('qiso')
-                    profiles = profiler.profile('qiso')
+            for zlim in zbins:
+                print(f'\ntracer = {tracer}, zlim = {zlim}\n')
+                b0, klim, slim = get_fit_setup(tracer, theory_name=theory_name)[1:4]           
 
-                profiles.bestfit.choice(input=True)
-                observable = likelihood.observables[0]
-                observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
-                profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='stats'))
-                if profiler.mpicomm.rank == 0:
-                    print(profiles.to_stats(tablefmt='pretty'))
-                # print out time taken
-                print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
+                if 'emulator' in todo:
+                    likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, blinded_index=blinded_index, save_emulator=True)
+                    likelihood.mpicomm.barrier()  # just to wait all processes are done
 
-            if 'sampling' in todo:
-                # start timer for this if statement
-                from desilike.samples import Chain, plotting
-                time1 = time.time()
-                # set up the likelihood
-                likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim)
-                save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
-                chains = nchains
-                sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
-                sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
-                chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, zlim=zlim, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
-                likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters
-                likelihood.observables[0].plot(show=True)
-                observable = likelihood.observables[0]
-                observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
-                # print out time taken
-                print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
+                if 'profiling' in todo:
+                    time2 = time.time()
+                    from desilike.profilers import MinuitProfiler, ScipyProfiler
+                    likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim, blinded_index=blinded_index, solve=True)
+                    profiler = MinuitProfiler(likelihood, seed=42, save_fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn))
+                    profiles = profiler.maximize(niterations=10)
+                    if 'qiso' in template_name:
+                        profiles = profiler.interval('qiso')
+                        profiles = profiler.profile('qiso')
 
-            if 'inference' in todo:
-                likelihood = sum(get_likelihood(compressed='direct' not in template_name, tracer=tracer, zlim=zlim) for tracer in tracers)
-                for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
-                    if param.varied: param.update(derived='.auto')
-                chains = nchains
-                save_fn = [os.path.join(outdir, 'chain_{}_{:d}.npy'.format('_'.join(tracers), ichain)) for ichain in range(nchains)]
-                # To restart:
-                chains = save_fn
-                sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
-                sampler.run(check={'max_eigen_gr': 0.02})
+                    profiles.bestfit.choice(input=True)
+                    observable = likelihood.observables[0]
+                    observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                    profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='stats'))
+                    if profiler.mpicomm.rank == 0:
+                        print(profiles.to_stats(tablefmt='pretty'))
+                    # print out time taken
+                    print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
 
-            Likelihoods = [get_observable_likelihood] * len(tracers)
-            name_like = ['DESIFullShape{}{}Likelihood'.format(template_name.capitalize(), tracer) for tracer in tracers]
-            kw_like = []
-            for tracer in tracers:
-                kw = {'tracer': tracer, 'theory_name': theory_name, 'template_name': template_name, 'observable_name': observable_name, 'cosmo': 'external'}
-                kw_like.append(kw)
-            if 'bindings' in todo:
-                setup_logging('info')
-                overwrite = True
-                CobayaLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
-                CosmoSISLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
-                MontePythonLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+                if 'sampling' in todo:
+                    # start timer for this if statement
+                    from desilike.samples import Chain, plotting
+                    time1 = time.time()
+                    # set up the likelihood
+                    likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim,  blinded_index=blinded_index,)
+                    save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
+                    chains = nchains
+                    sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
+                    sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
+                    chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, zlim=zlim, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
+                    likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters
+                    likelihood.observables[0].plot(show=True)
+                    observable = likelihood.observables[0]
+                    observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                    # print out time taken
+                    print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
 
-    print(f'## total time taken: {(time.time() - time0) / 60:.2f} mins')
+                if 'inference' in todo:
+                    likelihood = sum(get_likelihood(compressed='direct' not in template_name, tracer=tracer, zlim=zlim, blinded_index=blinded_index) for tracer in tracers)
+                    for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
+                        if param.varied: param.update(derived='.auto')
+                    chains = nchains
+                    save_fn = [os.path.join(outdir, 'chain_{}_{:d}.npy'.format('_'.join(tracers), ichain)) for ichain in range(nchains)]
+                    # To restart:
+                    chains = save_fn
+                    sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
+                    sampler.run(check={'max_eigen_gr': 0.02})
+
+                Likelihoods = [get_observable_likelihood] * len(tracers)
+                name_like = ['DESIFullShape{}{}Likelihood'.format(template_name.capitalize(), tracer) for tracer in tracers]
+                kw_like = []
+                for tracer in tracers:
+                    kw = {'tracer': tracer, 'theory_name': theory_name, 'template_name': template_name, 'observable_name': observable_name, 'cosmo': 'external'}
+                    kw_like.append(kw)
+                if 'bindings' in todo:
+                    setup_logging('info')
+                    overwrite = True
+                    CobayaLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+                    CosmoSISLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+                    MontePythonLikelihoodGenerator()(Likelihoods, name_like=name_like, kw_like=kw_like, overwrite=overwrite)
+
+        print(f'## total time taken: {(time.time() - time0) / 60:.2f} mins')

@@ -327,9 +327,10 @@ def get_observable_likelihood(theory_name='velocileptors',
     for param in theory.init.params:
         if param not in template.params:
             param.update(namespace=tracer)  # set namespace for all bias parameters
-
+    
+    fixed_params = {} #  NOTE: Old pipeine for bao plus DampedBAOWigglesTracerPowerSpectrumMultipoles it used to be: fixed_params = {'sigmaper': 4., 'sigmapar': 8.} not suere if it is needed anymore!
     expected = {name: value for name, value in expected.items() if name in template.params}
-    params = {}
+    params = {'b1': b1E, **expected, **fixed_params}
     # pk_xi_dir_blinded = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
     if observable_name == 'power':
@@ -369,6 +370,11 @@ def get_observable_likelihood(theory_name='velocileptors',
 
     covariance = ObservablesCovarianceMatrix(observable, footprints=footprint, resolution=5)
     likelihood = ObservablesGaussianLikelihood(observable, covariance=covariance(**params))
+    expected = {param: value for param, value in expected.items() if param in likelihood.all_params}
+    for param in fixed_params:
+        likelihood.all_params[param].update(fixed=True, value=fixed_params[param])
+    for param in expected:
+        likelihood.all_params[param].update(fixed=True, value=expected[param])
     likelihood.params['{}.loglikelihood'.format(tracer)] = likelihood.params['{}.logprior'.format(tracer)] = {}
     likelihood()  # to set up k-ranges for the emulator
     #for param in likelihood.all_params.select(basename=['alpha*', 'sn*', 'c*', 'al*']):
@@ -708,6 +714,9 @@ if __name__ == '__main__':
                     profiles.bestfit.choice(input=True)
                     observable = likelihood.observables[0]
                     observable.plot(fn=samples_fn(outdir, base='poles_bestfit'+'_only_now' if only_now_name else 'poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                    profiles.attrs['expected'] = expected # NOTE: this is the expected cosmology for the blinded, need to think how pass it here to the profile.
+                    profiles.attrs['covmat'] = observable.covariance
+                    profiles.save(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='npy'))
                     profiles.to_stats(fn=samples_fn(outdir, base='profiles'+'_only_now' if only_now_name else 'profiles', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='stats'))
                     if profiler.mpicomm.rank == 0:
                         print(profiles.to_stats(tablefmt='pretty'))
@@ -729,6 +738,9 @@ if __name__ == '__main__':
                     likelihood.observables[0].plot(show=True)
                     observable = likelihood.observables[0]
                     observable.plot(fn=samples_fn(outdir, base='poles_bestfit', compressed=post, tracer=tracer, zlim=zlim, **kw_fn, outfile_format='png'))
+                    chain_.attrs['expected'] = expected # NOTE: this is the expected cosmology for the blinded, need to think how pass it here to the chain.
+                    chain_.attrs['covmat'] = observable.covariance
+                    chain_.save(samples_fn(outdir, base='chain', compressed=post, tracer=tracer, zlim=zlim, **kw_fn)) # NOTE: not tested yet
                     # print out time taken
                     print(f'## time taken for sampling: {(time.time() - time1) / 60:.2f} mins')
 

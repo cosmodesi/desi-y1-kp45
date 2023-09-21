@@ -226,14 +226,14 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
     if tracer.startswith('BGS'):
         zbins = [(0.1, 0.4)]
         b0 = 1.34
-        smin, kmax = 35., 0.15
+        smin, kmax = 32., 0.18
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('LRG'):
         zbins = [(0.4, 0.6), (0.6, 0.8), (0.8, 1.1)]
         b0 = 1.7
-        smin, kmax = 30., 0.17
+        smin, kmax = 30., 0.2
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
 
@@ -241,14 +241,14 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
     if tracer.startswith('ELG'):
         zbins = [(0.8, 1.1), (0.8, 1.6), (1.1, 1.6)]
         b0 = 0.84
-        smin, kmax = 25., 0.2
+        smin, kmax = 27., 0.22
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.05, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('QSO'):
         zbins = [(0.8, 2.1)]
         b0 = 1.2
-        smin, kmax = 20., 0.25
+        smin, kmax = 25., 0.25
         if 'bao' in theory_name: smin, kmax = 40., 0.3
         klim = {ell: [0.03, kmax, 0.005] for ell in ells}
         slim = {ell: [smin, 150., 4.] for ell in ells}

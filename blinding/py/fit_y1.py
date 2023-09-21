@@ -1,37 +1,21 @@
 import os
 import numpy as np
 import argparse
+import yaml
 
-version = 'v0.6'
 emulators_dir = os.path.join(os.path.dirname(__file__), '_emulators')
+ 
+def load_config(path):
+    """Load the configuration from a YAML file.
 
-# Checking the existence of directories
-if os.path.exists('/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'): # NOTE: this is the directory for the TheCov covariance matrices still version v0.1
-    TheCov_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/'
-else:
-    TheCov_dir = None
+    Args:
+        path (str): The path to the YAML configuration file.
 
-if os.path.exists('/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)):
-    RascalC_dir = '/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/{}/'.format(version)
-else:
-    RascalC_dir = None
-
-# Setting the directories to None to force using the alternate directory
-TheCov_dir = None 
-# RascalC_dir = None 
-
-# Error handling if neither directory exists
-if TheCov_dir is None and RascalC_dir is None:
-    raise FileNotFoundError("Both TheCov_dir and RascalC_dir are not found.")
-
-
-base_path = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{}/blinded/'.format(version)
-
-if os.path.exists(base_path):
-    data_dir = base_path
-    catalog_dir = base_path
-else:
-    raise FileNotFoundError(f"The specified directory does not exist: {base_path}")
+    Returns:
+        dict: The configuration data.
+    """
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
     
 
 def cut_matrix(cov, xcov, ellscov, xlim):
@@ -314,15 +298,15 @@ def get_observable_likelihood(theory_name='velocileptors',
     # data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
     if observable_name == 'power':
-        data = os.path.join(data_dir, 'pk', 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
-        wmatrix = os.path.join(data_dir, 'pk', 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+        data = os.path.join(pk_blinded_dir, 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+        wmatrix = os.path.join(pk_blinded_dir, 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
             wmatrix += '_rpcut{}'.format(rpcut)
         observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        data = os.path.join(data_dir, 'xi','smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
+        data = os.path.join(xi_blinded_dir,'smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
         fiber_collisions = None
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
@@ -501,6 +485,43 @@ if __name__ == '__main__':
     import time
     time0 = time.time()
 
+    # Specify the path to your config.yaml file
+    config_file_path = "/global/homes/u/uendert/desi-y1-kp45/blinding/py/config.yaml"
+
+    # Load the configuration file
+    config = load_config(config_file_path)
+
+    # Main directory holding the BLINDED catalog data
+    catalog_dir = config['directories']['catalogs']['main']
+    
+    # Directory where the BLINDED pk data is stored
+    pk_blinded_dir = config['directories']['pk']
+    # Directory where the BLINDED xi data is stored
+    xi_blinded_dir = config['directories']['xi']
+    
+    # Path to the directory where the covariance matrix data is stored
+    thecov_path = config['directories']['external_tools']['thecov']
+    
+    # Path to the RascalC tool directory
+    rascal_path = config['directories']['external_tools']['rascal']
+    
+    # Print all the configuration values
+    print(f"\nLoaded Configuration from: {config_file_path}")
+    print("\nPrint all the configuration values:")
+
+    print("Directories:")
+    print("  Catalogs:")
+    print(f"    - Main: {config['directories']['catalogs']['main']}")
+
+    print("\n  PK_XI:")
+    print(f"    - Power: {config['directories']['pk']}\n")
+    print(f"    - Corr: {config['directories']['xi']}\n")
+
+    print("  External Tools:")
+    print(f"    - Thecov: {config['directories']['external_tools']['thecov']}\n")
+    print(f"    - Rascal: {config['directories']['external_tools']['rascal']}")
+    print("\n")
+    
     import argparse
     parser = argparse.ArgumentParser(description='Y1 mocks full shape')
     parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
@@ -510,7 +531,7 @@ if __name__ == '__main__':
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
     parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/{}'.format(version)), help='Where to save results')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/'), help='Where to save results')
     args = parser.parse_args()
 
     from desilike import setup_logging
@@ -543,6 +564,26 @@ if __name__ == '__main__':
 
     if only_now_name==True and template_name not in ('bao', 'bao-qisoqap'):
         raise ValueError('The --only_now argument can only be used with the bao or bao-qisoqap templates.')
+    
+    # Checking the existence of directories
+    if observable_name == 'power': # NOTE: this is the directory for the TheCov covariance matrices still version v0.1
+        TheCov_dir = thecov_path
+    else:
+        TheCov_dir = None
+
+    if observable_name == 'corr':
+        RascalC_dir = rascal_path
+    else:
+        RascalC_dir = None
+    
+    print("theCov_dir: ", TheCov_dir)
+    print("RascalC_dir: ", RascalC_dir)
+
+    # Error handling if neither directory exists
+    if TheCov_dir is None and RascalC_dir is None:
+        raise FileNotFoundError("Both TheCov_dir and RascalC_dir are not found.")
+    if TheCov_dir is not None and RascalC_dir is not None:
+        raise FileNotFoundError("Both TheCov_dir and RascalC_dir are found. Please specify only one.")
 
     nchains = 8
     kw_fn = dict(template_name=template_name, theory_name=theory_name, observable_name=observable_name, rpcut=rpcut)

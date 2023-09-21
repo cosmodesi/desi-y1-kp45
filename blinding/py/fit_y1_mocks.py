@@ -172,15 +172,20 @@ def get_theory(theory_name='velocileptors', observable_name='power', b1E=1.9, te
         Theory = DampedBAOWigglesTracerPowerSpectrumMultipoles if observable_name == 'power' else DampedBAOWigglesTracerCorrelationFunctionMultipoles
 
     theory = Theory(template=template, **kwargs)
-    # Changes to theory.params will remain whatever pipeline is built
+    # Changes to theory.init.params will remain whatever pipeline is built
     b1 = float(euler) + b1E - 1.
-    theory.params['b1'].update(value=b1, ref={'limits': [b1 - 0.1, b1 + 0.1]})
-    for param in theory.params.select(basename=['alpha6']): param.update(fixed=True)
+    theory.init.params['b1'].update(value=b1, ref={'limits': [b1 - 0.1, b1 + 0.1]})
+    #for param in theory.init.params.select(basename=['alpha6']): param.update(fixed=True)
+    # Let's keep 3 polynomials only
+    for param in theory.init.params.select(basename='al*_*'):
+        param.update(fixed=True)
+    for param in theory.init.params.select(basename=['al*_-2', 'al*_-1', 'al*_0']):
+        param.update(fixed=False)
     if 4 not in ells:
-        for param in theory.params.select(basename=['alpha4', 'sn4*', 'al4_*']): param.update(fixed=True)
-    if observable_name != 'power':
-        #for param in theory.params.select(basename=['ce1', 'sn0', 'al*_1', 'al*_-3']): param.update(fixed=True)
-        for param in theory.params.select(basename=['ce1', 'sn0', 'al*_-3']): param.update(fixed=True)
+        for param in theory.init.params.select(basename=['alpha4', 'sn4*', 'al4_*', 'cr2']): param.update(fixed=True)
+    #if observable_name != 'power':
+    #    for param in theory.init.params.select(basename=['ce1', 'sn0', 'al0_0']): param.update(fixed=True)
+    #for param in theory.init.params.select(basename=['b2m4']): param.update(fixed=True)  # pybird
     return theory
 
 

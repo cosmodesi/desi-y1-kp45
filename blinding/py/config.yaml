@@ -13,8 +13,7 @@ directories:
   # Paths to external tools used in the script.
   external_tools:  
     # Path to the directory where the covariance matrix data is stored.
-    ########## NOTE: this is the directory for the TheCov covariance matrices still version v0.1 ############
-    thecov: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/pk/covariances/"
+    thecov: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.6/blinded/pk/covariances/"
 
     # Path to the RascalC tool directory.
     rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.6/"

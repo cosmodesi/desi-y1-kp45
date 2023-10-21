@@ -298,15 +298,22 @@ def get_observable_likelihood(theory_name='velocileptors',
     # data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
     if observable_name == 'power':
-        data = os.path.join(pk_blinded_dir, 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
-        wmatrix = os.path.join(pk_blinded_dir, 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+        if 'mock' in args.config_path:
+            data = os.path.join(pk_blinded_dir, 'pk', 'pkpoles_{}_NGCSGCcomb_{}_{}_default_lin'.format(tracer,  zlim[0], zlim[1]))
+            wmatrix = os.path.join(pk_blinded_dir, 'pk', 'window_smooth_{}_NGCSGCcomb_{}_{}_default_lin'.format(tracer,  zlim[0], zlim[1]))
+        else:
+            data = os.path.join(pk_blinded_dir, 'pkpoles_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
+            wmatrix = os.path.join(pk_blinded_dir, 'wmatrix_smooth_{}_GCcomb_{}_{}_default_FKP_lin'.format(tracer,  zlim[0], zlim[1]))
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
             wmatrix += '_rpcut{}'.format(rpcut)
         observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        data = os.path.join(xi_blinded_dir,'smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
+        if 'mock' in args.config_path:
+            data = os.path.join(xi_blinded_dir, 'smu/allcounts_{}_NGCSGCcomb_{}_{}_default_lin_njack0_nran1_split20'.format(tracer,  zlim[0], zlim[1]))
+        else:
+            data = os.path.join(xi_blinded_dir,'smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
         fiber_collisions = None
         if rpcut:
             data += '_rpcut{}'.format(rpcut)
@@ -331,8 +338,12 @@ def get_observable_likelihood(theory_name='velocileptors',
     if refine_cov:
         if TheCov_dir is not None:
             # region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
-
-            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_GCcomb_{}_{}.txt'.format(tracer,  zlim[0], zlim[1])
+            if 'mock' in args.config_path:
+                zlim_ = (0.4, 1.1) # hardcoded
+                blinded_index = 1 # [0 1 2 3 4 5 6 7 8] zero is unblinded NB: this is hardcoded to the first unblinded index
+                covariance_fn = TheCov_dir + 'CovGaussian_Pk_0_{}__NGCSGCcomb_zmin{}_zmax{}_{}.txt'.format(tracer, zlim_[0], zlim_[1], blinded_index)
+            else:
+                covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_GCcomb_{}_{}.txt'.format(tracer,  zlim[0], zlim[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading Pk covariance from {}.\n'.format(covariance_fn))
@@ -343,7 +354,11 @@ def get_observable_likelihood(theory_name='velocileptors',
             else:
                 raise ValueError('Covariance file {} not found!'.format(covariance_fn))
         elif RascalC_dir is not None:
-            covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim[0], zlim[1])
+            if 'mock' in args.config_path:
+                zlim_ = (0.4, 1.1) # hardcoded
+                covariance_fn = RascalC_dir + 'xi024_test_w0-0.970439944958287_wa-0.507777992481059_{}_NScomb_{}_{}_default_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim_[0], zlim_[1]) # NB: NScomb is hardcoded alsom the test w0 and wa values are hardcoded
+            else:
+                covariance_fn = RascalC_dir + 'xi024_{}_GCcomb_{}_{}_default_FKP_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim[0], zlim[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading xi024 covariance from {}.\n'.format(covariance_fn))
@@ -493,7 +508,7 @@ if __name__ == '__main__':
     parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
-    parser.add_argument("--double_blind", help="Specify path to the double-blind configuration YAML file containing paths to blinded catalogs and clustering measurements. Default is 'n', which means no double-blinding.", default='n')
+    parser.add_argument("--config_path", type=str, help="Specify YAML configuration holding various paths used in the script for catalogs and clustering measurements.", default=os.path.join(os.path.dirname(__file__), 'config.yaml'))
     parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
     parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/double_blinded/'), help='Where to save results')
     args = parser.parse_args()
@@ -514,7 +529,7 @@ if __name__ == '__main__':
     todo = args.todo
     post = 'post' in args.todo
     rpcut = args.rpcut
-    double_blind = args.double_blind
+    config_file_path = args.config_path
 
     # Explicitly print all the selected settings at the beginning
     print(f"Starting analysis with the following settings:")
@@ -524,52 +539,45 @@ if __name__ == '__main__':
     print(f"Theory: {args.theory}")
     print(f"Observable: {args.observable}")
     print(f"RP Cut: {args.rpcut if args.rpcut is not None else 'No cut specified'}")
-    print(f"Double Blinding: {args.double_blind}")
+    print(f"config_file_path: {args.config_path}")
     print(f"Tasks to Perform: {', '.join(args.todo)}")
     print(f"Output Directory: {args.outdir}")
-
-    # Specify the path to your config.yaml file
-    
-    if double_blind == 'n':
-        config_file_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
-    if double_blind == 'y':
-        config_file_path = os.path.join(os.path.dirname(__file__), 'config_double_blinded.yaml')
-    if double_blind == 'nCov': # NOTE: Covariances are not blinded
-        config_file_path = os.path.join(os.path.dirname(__file__), 'config_double_blinded_nCov.yaml')
 
     # Load the configuration file
     config = load_config(config_file_path)
 
     # Main directory holding the BLINDED catalog data
-    catalog_dir = config['directories']['catalogs']['main']
-    
+    catalog_dir = config['directories']['base_path']
+
     # Directory where the BLINDED pk data is stored
     pk_blinded_dir = config['directories']['pk']
     # Directory where the BLINDED xi data is stored
     xi_blinded_dir = config['directories']['xi']
-    
+
     # Path to the directory where the covariance matrix data is stored
     thecov_path = config['directories']['external_tools']['thecov']
-    
+
     # Path to the RascalC tool directory
     rascal_path = config['directories']['external_tools']['rascal']
+
     
     # Print all the configuration values
     print(f"\nLoaded Configuration from: {config_file_path}")
     print("\nPrint all the configuration values:")
 
     print("Directories:")
-    print("  Catalogs:")
-    print(f"    - Main: {config['directories']['catalogs']['main']}")
+    print("  Base Path:")
+    print(f"    - Main: {config['directories']['base_path']}")
 
     print("\n  PK_XI:")
     print(f"    - Power: {config['directories']['pk']}\n")
-    print(f"    - Corr: {config['directories']['xi']}\n")
+    print(f"    - Correlation: {config['directories']['xi']}\n")
 
     print("  External Tools:")
     print(f"    - Thecov: {config['directories']['external_tools']['thecov']}\n")
     print(f"    - Rascal: {config['directories']['external_tools']['rascal']}")
     print("\n")
+
 
     if only_now_name==True and template_name not in ('bao', 'bao-qisoqap'):
         raise ValueError('The --only_now argument can only be used with the bao or bao-qisoqap templates.')

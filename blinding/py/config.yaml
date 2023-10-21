@@ -4,8 +4,7 @@ directories:
   catalogs:
     # Main directory holding blinded catalog data.
     main: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.6/blinded/"
-    
-
+   
   # Directory paths related to pk and xi data.
   pk: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.6/blinded/pk/" #pay attention to the last slash
   xi: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.6/blinded/xi/"
@@ -14,6 +13,5 @@ directories:
   external_tools:  
     # Path to the directory where the covariance matrix data is stored.
     thecov: "/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.6/blinded/pk/covariances/"
-
     # Path to the RascalC tool directory.
     rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/Y1/blinded/v0.6/"

@@ -228,7 +228,7 @@ def get_fit_setup(tracer, theory_name='velocileptors'):
 
         slim = {ell: [smin, 150., 4.] for ell in ells}
     if tracer.startswith('ELG'):
-        zbins = [(0.8, 1.1), (0.8, 1.6), (1.1, 1.6)]
+        zbins = [(0.8, 1.1), (1.1, 1.6)]
         b0 = 0.84
         smin, kmax = 27., 0.22
         if 'bao' in theory_name: smin, kmax = 40., 0.3
@@ -330,9 +330,9 @@ def get_observable_likelihood(theory_name='velocileptors',
     
     if refine_cov:
         if TheCov_dir is not None:
-            region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
+            # region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
 
-            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_{}_{}_{}.txt'.format(tracer, region,  zlim[0], zlim[1])
+            covariance_fn = TheCov_dir + 'cov_gaussian_prerec_{}_GCcomb_{}_{}.txt'.format(tracer,  zlim[0], zlim[1])
             if os.path.isfile(covariance_fn):
                 cov = np.loadtxt(covariance_fn)
                 print('\nLoading Pk covariance from {}.\n'.format(covariance_fn))
@@ -484,9 +484,58 @@ def samples_fn(outdir,
 if __name__ == '__main__':
     import time
     time0 = time.time()
+    
+    import argparse
+    parser = argparse.ArgumentParser(description='Y1 mocks full shape')
+    parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
+    parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'shapefit-qisoqap', 'shapefit-qisoqap-prior' , 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
+    parser.add_argument('--only_now', action='store_true', required=False, help='no-wiggle only')
+    parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
+    parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
+    parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
+    parser.add_argument("--double_blind", help="Specify path to the double-blind configuration YAML file containing paths to blinded catalogs and clustering measurements. Default is 'n', which means no double-blinding.", default='n')
+    parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/double_blinded/'), help='Where to save results')
+    args = parser.parse_args()
+
+    from desilike import setup_logging
+    from desilike.samplers import EmceeSampler, ZeusSampler
+    from desilike.bindings import CobayaLikelihoodGenerator, CosmoSISLikelihoodGenerator, MontePythonLikelihoodGenerator
+
+    setup_logging()
+
+    print(f'\nargs = {args}\n')
+    outdir = args.outdir
+    tracers = args.tracer
+    template_name = args.template
+    only_now_name = args.only_now
+    theory_name = args.theory
+    observable_name = args.observable
+    todo = args.todo
+    post = 'post' in args.todo
+    rpcut = args.rpcut
+    double_blind = args.double_blind
+
+    # Explicitly print all the selected settings at the beginning
+    print(f"Starting analysis with the following settings:")
+    print(f"Tracer: {args.tracer}")
+    print(f"Template: {args.template}")
+    print(f"Only Now: {'Yes' if args.only_now else 'No'}")
+    print(f"Theory: {args.theory}")
+    print(f"Observable: {args.observable}")
+    print(f"RP Cut: {args.rpcut if args.rpcut is not None else 'No cut specified'}")
+    print(f"Double Blinding: {args.double_blind}")
+    print(f"Tasks to Perform: {', '.join(args.todo)}")
+    print(f"Output Directory: {args.outdir}")
 
     # Specify the path to your config.yaml file
-    config_file_path = "/global/homes/u/uendert/desi-y1-kp45/blinding/py/config.yaml"
+    
+    if double_blind == 'n':
+        config_file_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
+    if double_blind == 'y':
+        config_file_path = os.path.join(os.path.dirname(__file__), 'config_double_blinded.yaml')
+    if double_blind == 'nCov': # NOTE: Covariances are not blinded
+        config_file_path = os.path.join(os.path.dirname(__file__), 'config_double_blinded_nCov.yaml')
 
     # Load the configuration file
     config = load_config(config_file_path)
@@ -521,46 +570,6 @@ if __name__ == '__main__':
     print(f"    - Thecov: {config['directories']['external_tools']['thecov']}\n")
     print(f"    - Rascal: {config['directories']['external_tools']['rascal']}")
     print("\n")
-    
-    import argparse
-    parser = argparse.ArgumentParser(description='Y1 mocks full shape')
-    parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
-    parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'shapefit-qisoqap', 'shapefit-qisoqap-prior' , 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
-    parser.add_argument('--only_now', action='store_true', required=False, help='no-wiggle only')
-    parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
-    parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
-    parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
-    parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/'), help='Where to save results')
-    args = parser.parse_args()
-
-    from desilike import setup_logging
-    from desilike.samplers import EmceeSampler, ZeusSampler
-    from desilike.bindings import CobayaLikelihoodGenerator, CosmoSISLikelihoodGenerator, MontePythonLikelihoodGenerator
-
-    setup_logging()
-
-    print(f'\nargs = {args}\n')
-    outdir = args.outdir
-    tracers = args.tracer
-    template_name = args.template
-    only_now_name = args.only_now
-    theory_name = args.theory
-    observable_name = args.observable
-    todo = args.todo
-    post = 'post' in args.todo
-    rpcut = args.rpcut
-
-    # Explicitly print all the selected settings at the beginning
-    print(f"Starting analysis with the following settings:")
-    print(f"Tracer: {args.tracer}")
-    print(f"Template: {args.template}")
-    print(f"Only Now: {'Yes' if args.only_now else 'No'}")
-    print(f"Theory: {args.theory}")
-    print(f"Observable: {args.observable}")
-    print(f"RP Cut: {args.rpcut if args.rpcut is not None else 'No cut specified'}")
-    print(f"Tasks to Perform: {', '.join(args.todo)}")
-    print(f"Output Directory: {args.outdir}")
 
     if only_now_name==True and template_name not in ('bao', 'bao-qisoqap'):
         raise ValueError('The --only_now argument can only be used with the bao or bao-qisoqap templates.')
@@ -631,7 +640,7 @@ if __name__ == '__main__':
                 time1 = time.time()
                 # set up the likelihood
                 likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim)
-                save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, **kw_fn) for i in range(nchains)]
+                save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, zlim=zlim, **kw_fn) for i in range(nchains)]
                 chains = nchains
                 sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
                 sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})

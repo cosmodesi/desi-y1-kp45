@@ -38,11 +38,11 @@ do
     sed "s|{test_case}|$i|g" config_mocks.yaml > config_mocks_temp.yaml
 
     # Log file path
-    log_file=$HOME/desi-y1-kp45/blinding/scripts/single_blinded_log/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log
+    log_file=$HOME/desi-y1-kp45/blinding/scripts/log/fit_y1_${tracer}_${template}_${theory}_${observable}_${todo// /_}.log
     echo $log_file
 
     # Execute the python script
-    srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py --config_path config_mocks_temp.yaml --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir > $log_file 2>&1
+    srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py --config_path config_mocks_temp.yaml --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir$i > $log_file 2>&1
 done
 
 # Remove the temporary file after the loop ends

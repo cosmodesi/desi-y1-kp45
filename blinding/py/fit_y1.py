@@ -298,7 +298,10 @@ def get_observable_likelihood(theory_name='velocileptors',
     # data_dir = '/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.4/blinded/'
 
     if observable_name == 'power':
-        if 'mock' in args.config_path:
+        if 'mock' and 'unblinded' in args.config_path:
+            data = os.path.join(pk_blinded_dir, 'pk', 'XXXXX'.format(tracer,  zlim[0], zlim[1]))
+            wmatrix = os.path.join(pk_blinded_dir, 'pk', 'XXXXX'.format(tracer,  zlim[0], zlim[1]))
+        elif 'mock' in args.config_path:
             data = os.path.join(pk_blinded_dir, 'pk', 'pkpoles_{}_NGCSGCcomb_{}_{}_default_lin'.format(tracer,  zlim[0], zlim[1]))
             wmatrix = os.path.join(pk_blinded_dir, 'pk', 'window_smooth_{}_NGCSGCcomb_{}_{}_default_lin'.format(tracer,  zlim[0], zlim[1]))
         else:
@@ -310,7 +313,9 @@ def get_observable_likelihood(theory_name='velocileptors',
         observable = TracerPowerSpectrumMultipolesObservable(klim=klim, data=data + '.npy', wmatrix=wmatrix + '.npy', kinlim=(0.005, 0.35), kinrebin=5, theory=theory)   # generates fake data
 
     if observable_name == 'corr':
-        if 'mock' in args.config_path:
+        if 'mock' and 'unblinded' in args.config_path:
+            data = os.path.join(xi_blinded_dir, 'smu/allcounts_{}_NScomb_{}_{}_default_lin_njack0_nran1_split20'.format(tracer,  zlim[0], zlim[1]))
+        elif 'mock' in args.config_path:
             data = os.path.join(xi_blinded_dir, 'smu/allcounts_{}_NGCSGCcomb_{}_{}_default_lin_njack0_nran1_split20'.format(tracer,  zlim[0], zlim[1]))
         else:
             data = os.path.join(xi_blinded_dir,'smu/allcounts_{}_GCcomb_{}_{}_default_FKP_lin_njack0_nran4_split20'.format(tracer,  zlim[0], zlim[1]))
@@ -337,8 +342,11 @@ def get_observable_likelihood(theory_name='velocileptors',
     
     if refine_cov:
         if TheCov_dir is not None:
-            # region = 'NGCSGCcomb' # hardcoded since we are using the combined NGC and SGC footprint and the nomeclature is different in the TheCov covariance files
-            if 'mock' in args.config_path:
+            if 'mock' and 'unblinded' in args.config_path:
+                zlim_ = (0.4, 1.1) # hardcoded
+                blinded_index = 0 # [0 1 2 3 4 5 6 7 8] zero is unblinded NB: this is hardcoded to the first unblinded index
+                covariance_fn = TheCov_dir + 'CovGaussian_Pk_0_{}__NGCSGCcomb_zmin{}_zmax{}_{}.txt'.format(tracer, zlim_[0], zlim_[1], blinded_index)                
+            elif 'mock' in args.config_path:
                 zlim_ = (0.4, 1.1) # hardcoded
                 blinded_index = 1 # [0 1 2 3 4 5 6 7 8] zero is unblinded NB: this is hardcoded to the first unblinded index
                 covariance_fn = TheCov_dir + 'CovGaussian_Pk_0_{}__NGCSGCcomb_zmin{}_zmax{}_{}.txt'.format(tracer, zlim_[0], zlim_[1], blinded_index)
@@ -354,7 +362,10 @@ def get_observable_likelihood(theory_name='velocileptors',
             else:
                 raise ValueError('Covariance file {} not found!'.format(covariance_fn))
         elif RascalC_dir is not None:
-            if 'mock' in args.config_path:
+            if 'mock' and 'unblinded'in args.config_path:
+                zlim_ = (0.4, 1.1) # hardcoded
+                covariance_fn = RascalC_dir + 'xi024_unblinded_{}_NScomb_{}_{}_default_lin4_s20-200_cov_RascalC_rescaled.txt'.format(tracer, zlim_[0], zlim_[1]) # NB: NScomb is hardcoded alsom the test w0 and wa values are hardcoded
+            elif 'mock' in args.config_path:
                 zlim_ = (0.4, 1.1) # hardcoded
                 covariance_fn = RascalC_dir + 'xi024_test_w0-0.970439944958287_wa-0.507777992481059_{}_NScomb_{}_{}_default_lin4_s20-200_cov_RascalC_Gaussian.txt'.format(tracer, zlim_[0], zlim_[1]) # NB: NScomb is hardcoded alsom the test w0 and wa values are hardcoded
             else:
@@ -509,8 +520,9 @@ if __name__ == '__main__':
     parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
     parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
     parser.add_argument("--config_path", type=str, help="Specify YAML configuration holding various paths used in the script for catalogs and clustering measurements.", default=os.path.join(os.path.dirname(__file__), 'config.yaml'))
-    parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test_y1_full_shape/double_blinded/'), help='Where to save results')
+    parser.add_argument('--zlim', help='z-limits', type=str, nargs='*', default=None)
+    parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'sampling-resume', 'bindings', 'inference'], help='To do')
+    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test/'), help='Where to save results')
     args = parser.parse_args()
 
     from desilike import setup_logging
@@ -530,6 +542,7 @@ if __name__ == '__main__':
     post = 'post' in args.todo
     rpcut = args.rpcut
     config_file_path = args.config_path
+    zlim = args.zlim
 
     # Explicitly print all the selected settings at the beginning
     print(f"Starting analysis with the following settings:")
@@ -613,7 +626,11 @@ if __name__ == '__main__':
         return get_observable_likelihood(tracer=tracer, zlim=zlim, *args, **kw_fn, **kwargs)
     
     for tracer in tracers:
-        zbins = get_fit_setup(tracer, theory_name=theory_name)[0] # this is zlim, b0, klim, slim - This defined fit_setup as a global variable scope.
+        if zlim is None:
+            zbins = get_fit_setup(tracer, theory_name=theory_name)[0] # this is zlim, b0, klim, slim - This defined fit_setup as a global variable scope.
+        else:
+            zbins = [tuple(map(float, zlim))]
+            print(f"zbins: {zbins}")
 
         for zlim in zbins:
             print(f'\ntracer = {tracer}, zlim = {zlim}\n')
@@ -642,7 +659,7 @@ if __name__ == '__main__':
                 # print out time taken
                 print(f'## time taken for profiling {(time.time()-time2) / 60:.2f} mins')
 
-            if 'sampling' in todo:
+            if 'sampling' or 'sampling-resume' in todo:
                 # start timer for this if statement
                 from desilike.samples import Chain, plotting
                 time1 = time.time()
@@ -650,7 +667,10 @@ if __name__ == '__main__':
                 likelihood = get_likelihood(compressed=post, tracer=tracer, zlim=zlim)
                 save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, zlim=zlim, **kw_fn) for i in range(nchains)]
                 chains = nchains
-                sampler = EmceeSampler(likelihood, chains=chains, nwalkers=40, seed=42, save_fn=save_fn)
+                if 'sampling-resume' in todo:
+                    sampler = EmceeSampler(likelihood, nwalkers=40, seed=42, chains=save_fn, save_fn=save_fn)
+                else:
+                    sampler = EmceeSampler(likelihood, nwalkers=40, seed=42, chains=chains, save_fn=save_fn)
                 sampler.run(min_iterations=2000, check={'max_eigen_gr': 0.03})
                 chain_ = Chain.concatenate([Chain.load(samples_fn(outdir, i=i, compressed=post, tracer=tracer, zlim=zlim, **kw_fn)).remove_burnin(0.5)[::10] for i in range(nchains)])  # load and concatenate all chains
                 likelihood(**chain_.choice(index='argmax', input=True))  # compute the likelihood at the "bestfit of the chain" parameters

@@ -11,4 +11,4 @@ directories:
   # Paths to external tools used in the script.
   external_tools:  
     thecov: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/pk_xi_measurements/CovPk/"
-    rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/AbacusSummit/CutSky/Y1-blinding/"
+    rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/AbacusSummit/CutSky/Y1-blinding/" # contains both blinding and unblinding cov

@@ -79,7 +79,7 @@ def get_blind_cosmo(tracer_type, zmin, zmax, w0_blind=-0.90, wa_blind=0.26, fidu
     qap = qpar / qper
     df = f_blind / fiducial_f
 
-    return dict(qpar=qpar, qper=qper, df=df, dm=0., qiso=qiso, qap=qap)
+    return dict(qiso=qiso, qap=qap, df=df, dm=0.)
 
 if __name__ == "__main__":
     # Sample execution code or testing can go here

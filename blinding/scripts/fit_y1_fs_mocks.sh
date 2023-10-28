@@ -26,13 +26,13 @@ echo 'Running the RSD fitting pipeline'
 
 # Loop through each test case.
 for i in "test_w0-0.9040043101843285_wa0.025634205416364297_fnl20" \
-         "test_w0-0.9057030601797708_wa-0.6831142329608426_fnl20" \
-         "test_w0-0.970439944958287_wa-0.507777992481059_fnl20" \
-         "test_w0-0.996229742129104_wa0.28930866494014884_fnl20" \
-         "test_w0-1.0485430984101343_wa0.14015686872763022_fnl20" \
-         "test_w0-1.106392086529483_wa0.45478607672455995_fnl20" \
-         "test_w0-1.1616966626392298_wa0.3746115553255438_fnl20" \
-         "test_w0-1.233469858595847_wa0.7658531629974685_fnl20"
+        "test_w0-0.9057030601797708_wa-0.6831142329608426_fnl20" \
+        "test_w0-0.970439944958287_wa-0.507777992481059_fnl20" \
+        "test_w0-0.996229742129104_wa0.28930866494014884_fnl20" \
+        "test_w0-1.0485430984101343_wa0.14015686872763022_fnl20" \
+        "test_w0-1.106392086529483_wa0.45478607672455995_fnl20" \
+        "test_w0-1.1616966626392298_wa0.3746115553255438_fnl20" \
+        "test_w0-1.233469858595847_wa0.7658531629974685_fnl20"
 do
     # Use the sed command to replace the placeholder and write to a temporary file.
     sed "s|{test_case}|$i|g" config_mocks.yaml > config_mocks_temp.yaml

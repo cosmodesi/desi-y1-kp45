@@ -512,18 +512,55 @@ if __name__ == '__main__':
     time0 = time.time()
     
     import argparse
-    parser = argparse.ArgumentParser(description='Y1 mocks full shape')
-    parser.add_argument('--tracer', type=str, nargs='*', required=False, default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'], help='Tracer')
-    parser.add_argument('--template', type=str, required=False, default='shapefit', choices=['direct', 'shapefit', 'shapefit-qisoqap', 'shapefit-qisoqap-prior' , 'wigglesplit', 'bao', 'bao-qisoqap'], help='Template')
-    parser.add_argument('--only_now', action='store_true', required=False, help='no-wiggle only')
-    parser.add_argument('--theory', type=str, required=False, default='velocileptors', choices=['velocileptors', 'pybird', 'dampedbao'], help='Theory')
-    parser.add_argument('--observable', type=str, required=False, default='power', choices=['power', 'corr'], help='Observable')
-    parser.add_argument('--rpcut', type=float, required=False, default=None, help='rp-cut in measurement units')
-    parser.add_argument("--config_path", type=str, help="Specify YAML configuration holding various paths used in the script for catalogs and clustering measurements.", default=os.path.join(os.path.dirname(__file__), 'config.yaml'))
-    parser.add_argument('--zlim', help='z-limits', type=str, nargs='*', default=None)
-    parser.add_argument('--todo', type=str, nargs='*', required=False, default=['emulator', 'sampling'], choices=['post', 'emulator', 'profiling', 'sampling', 'sampling-resume', 'bindings', 'inference'], help='To do')
-    parser.add_argument('--outdir', type=str, required=False, default=os.path.join(os.getenv('SCRATCH'), 'test/'), help='Where to save results')
+    
+    parser = argparse.ArgumentParser(description='Script for analyzing Y1 data using full shape, BAO, or direct methods. Supports both mock and real datasets.')
+
+    # Define the tracer for the data
+    parser.add_argument('--tracer', type=str, nargs='*', default=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'],
+                        choices=['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOPnotqso', 'QSO'],
+                        help='Select the tracer(s) for the analysis. Choices include BGS, LRG, ELG, and QSO.')
+
+    # Specify the template type for the analysis
+    parser.add_argument('--template', type=str, default='shapefit',
+                        choices=['direct', 'shapefit', 'shapefit-qisoqap', 'shapefit-qisoqap-prior', 'wigglesplit', 'bao', 'bao-qisoqap'],
+                        help='Template type for the data analysis.')
+
+    # Option for analyzing no-wiggle only data
+    parser.add_argument('--only_now', action='store_true',
+                        help='Use this flag to analyze no-wiggle only data.')
+
+    # Specify the theoretical model for analysis
+    parser.add_argument('--theory', type=str, default='velocileptors',
+                        choices=['velocileptors', 'pybird', 'dampedbao'],
+                        help='Theoretical model for the data analysis.')
+
+    # Define the observable for analysis: power spectrum or correlation function
+    parser.add_argument('--observable', type=str, default='power', choices=['power', 'corr'],
+                        help='Observable for analysis: power spectrum (power) or correlation function (corr).')
+
+    # Specify an rp-cut value if needed
+    parser.add_argument('--rpcut', type=float, default=None,
+                        help='Specify an rp-cut in measurement units if needed.')
+
+    # Define the path to the configuration file
+    parser.add_argument("--config_path", type=str, default=os.path.join(os.path.dirname(__file__), 'config.yaml'),
+                        help="Path to the YAML configuration that specifies directories for catalogs, clustering measurements, and covariances for both mock and real datasets.")
+
+    # Define the redshift limits for the analysis
+    parser.add_argument('--zlim', type=str, nargs='*', default=None,
+                        help='Specify the redshift limits for the analysis.')
+
+    # Define tasks to be done
+    parser.add_argument('--todo', type=str, nargs='*', default=['emulator', 'sampling'],
+                        choices=['post', 'emulator', 'profiling', 'sampling', 'sampling-resume', 'bindings', 'inference'],
+                        help='List of tasks to be executed for the data, including post-processing, emulation, profiling, and more.')
+
+    # Specify the directory to save the results
+    parser.add_argument('--outdir', type=str, default=os.path.join(os.getenv('SCRATCH'), 'test/'),
+                        help='Directory to save the results of the analysis, for both mocks and real data.')
+
     args = parser.parse_args()
+
 
     from desilike import setup_logging
     from desilike.samplers import EmceeSampler, ZeusSampler

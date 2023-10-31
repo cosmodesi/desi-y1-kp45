@@ -1,0 +1,10 @@
+tracer: LRG
+zmin: 0.4
+zmax: 0.6
+
+pk_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/v0.6/blinded/pk/
+catalog_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/v0.6/blinded/
+randoms_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/v0.6/blinded/
+
+window_kernel: window_kernel_{tracer}_{zmin}_{zmax}.npz
+output_covariance: cov_gaussian_prerec_{tracer}_NGC_{zmin}_{zmax}.txt

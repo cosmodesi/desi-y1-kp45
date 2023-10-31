@@ -11,38 +11,43 @@ import os
 import logging
 import time
 
+# Setting up the logger
 logger = logging.getLogger('GenerateCovariance')
 logging.basicConfig(filename='covariance.log', level=logging.DEBUG)
 
-# Functions for data processing
+# ----------- DATA PROCESSING FUNCTIONS --------------
 
 def read_npy(filename):
+    """Read data from a NPY file and return a Catalog object."""
     data = np.load(filename)
     labels = ['RA', 'DEC', 'Z', 'NZ']
     return Catalog({l: data[:,i] for i,l in enumerate(labels)})
 
 def get_maskbit(main, nz, Y5, sv3):
+    """Calculate and return the maskbit for the catalog."""
     return main * (2**3) + sv3 * (2**2) + Y5 * (2**1) + nz * (2**0)
 
 def select_maskbit(catalog, main=1, nz=0, Y5=1, sv3=0):
+    """Filter the catalog based on the maskbit."""
     maskbit = get_maskbit(main, nz, Y5, sv3)
-    catalog = catalog[(catalog['STATUS'] & maskbit == maskbit)]
-    return catalog
+    return catalog[(catalog['STATUS'] & maskbit == maskbit)]
 
 def select_region(catalog, region):
+    """Filter the catalog based on a specified sky region."""
     if 'NGC' in region:
         mask = (catalog['RA'] > 88) & (catalog['RA'] < 303)
     elif 'SGC' in region:
         mask = (catalog['RA'] < 88) | (catalog['RA'] > 303)
-    elif 'NGCSGCcomb':
+    elif 'NGCSGCcomb' in region:
         return catalog
     return catalog[mask]
 
 def select_redshift(catalog, zmin, zmax):
-    mask = (catalog['Z'] > zmin) & (catalog['Z'] < zmax)
-    return catalog[mask]
+    """Filter the catalog based on redshift range."""
+    return catalog[(catalog['Z'] > zmin) & (catalog['Z'] < zmax)]
 
 def normalize_and_concatenate(list_data, list_randoms):
+    """Normalize and concatenate data and random catalogs."""
     wsums_data = [data['WEIGHT'].sum().compute() for data in list_data]
     wsums_randoms = [randoms['WEIGHT'].sum().compute() for randoms in list_randoms]
     alpha = sum(wsums_data) / sum(wsums_randoms)
@@ -94,8 +99,9 @@ randoms = Catalog.read(os.path.join(randoms_dir, f'{tracer}_NGC_0_clustering.ran
 randoms = select_redshift(randoms, zmin, zmax)
 
 randoms['POSITION'] = utils.sky_to_cartesian(cosmo.comoving_radial_distance(randoms['Z']), randoms['RA'], randoms['DEC'], degree=True)
-
 alpha = get_alpha(data=catalog, randoms=randoms)
+
+# --------- COMPUTING COVARIANCE --------------
 
 geometry = thecov.geometry.SurveyGeometry(randoms, nmesh=32, boxpad=1.2, alpha=alpha, kmodes_sampled=2000)
 
@@ -118,7 +124,7 @@ if not os.path.exists(window_kernel):
 covariance.savetxt(output_covariance)
 
 end_time = time.time()
-elapsed_time = (end_time - start_time)/60.
+elapsed_time = (end_time - start_time) / 60.
 
 if __name__ == "__main__":
     print(f"Script executed in {elapsed_time:.2f} minutes.")

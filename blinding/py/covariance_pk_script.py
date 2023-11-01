@@ -88,6 +88,7 @@ window_kernel = config['window_kernel'].format(tracer=tracer, zmin=zmin, zmax=zm
 output_covariance = config['output_covariance'].format(tracer=tracer, zmin=zmin, zmax=zmax)
 
 pk = PowerSpectrumStatistics.load(os.path.join(pk_dir, f'pkpoles_{tracer}_NGC_{zmin}_{zmax}_default_FKP_lin.npy'))
+pk = pk[:400:5]
 shotnoise = pk.shotnoise
 P = pk(ell=[0, 2, 4], remove_shotnoise=True, complex=False)
 P0, P2, P4 = P[0, :], P[1, :], P[2, :]

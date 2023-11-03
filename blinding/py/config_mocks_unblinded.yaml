@@ -1,0 +1,17 @@
+# Directory configuration holding various paths used in the script.
+directories:
+
+  # Main directory holding unblinded catalog data.
+  base_path: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/"
+  
+  # Directory where the unblinded pk and xi data is stored.
+  pk: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/unblinded/pk/" #pay attention to the last slash
+  xi: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/unblinded/xi/"
+
+  # Paths to external tools used in the script.
+  external_tools:  
+    # Path to the directory where the covariance matrix data is stored.
+    ##### there is no covariance matrix for fnl cases
+    thecov: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/pk_xi_measurements/CovPk/"
+    # Path to the RascalC tool directory.
+    rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/AbacusSummit/CutSky/Y1-blinding/"

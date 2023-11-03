@@ -18,14 +18,15 @@ cd $dir_script # go to the directory where the script is
 tracer='LRG'
 template='shapefit-qisoqap'
 theory='velocileptors'
-observable='corr'
+observable='power'
 todo='emulator sampling'
 outdir='/pscratch/sd/u/uendert/test_y1_full_shape/double_blinded/'
 
 echo 'Running the RSD fitting pipeline'
-echo /desi-y1-kp45/blinding/scripts/double_blinded_log/fit_y1_${tracer}_${tracer_zlim}_${template}_${theory}_${observable}_${todo// /_}.log
-
-srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir --double_blind y  > $HOME/desi-y1-kp45/blinding/scripts/double_blinded_log/fit_y1_${tracer}_${tracer_zlim}_${template}_${theory}_${observable}_${todo// /_}.log 2>&1
+# Log file path
+log_file=$HOME/desi-y1-kp45/blinding/scripts/double_blinded_log/fit_y1_${tracer}_${tracer_zlim}_${template}_${theory}_${observable}_${todo// /_}.log
+echo $log_file
+srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py --config_path config_double_blinded.yaml --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir > $log_file 2>&1
 
 echo 'Done'
 

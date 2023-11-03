@@ -168,3 +168,5 @@ elapsed_time = (end_time - start_time) / 60.
 if __name__ == "__main__":
     print(f"Script executed in {elapsed_time:.2f} minutes.")
     print(f"Results saved to {output_covariance}")
+    logger.info(f"Script executed in {elapsed_time:.2f} minutes.")
+    logger.info(f"Results saved to {output_covariance}")

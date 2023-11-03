@@ -27,5 +27,8 @@ doc/_build/
 *.vscode
 *JOB*
 *.log
+*.sh
+*.npz
+**cov*.txt
 # Unit test / coverage reports
 **/.coverage

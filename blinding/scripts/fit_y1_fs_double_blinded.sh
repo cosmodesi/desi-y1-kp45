@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# --- Slurm job directives ---
 #SBATCH -A desi
 #SBATCH -C cpu
 #SBATCH --qos=regular
@@ -8,27 +9,40 @@
 #SBATCH --ntasks-per-node=256
 #SBATCH --output=JOB_OUT_%x_%j.txt
 #SBATCH --error=JOB_ERR_%x_%j.txt
-#first steps, get environment
 
-source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
+# --- Environment setup ---
+source "/global/common/software/desi/users/adematti/cosmodesi_environment.sh" main
 
-dir_script=$HOME/desi-y1-kp45/blinding/py/ 
-cd $dir_script # go to the directory where the script is
+# --- Directories and Parameters setup ---
+DIR_SCRIPT="$HOME/desi-y1-kp45/blinding/py/"
+TRACER="LRG"
+TEMPLATE="shapefit-qisoqap"
+THEORY="velocileptors"
+OBSERVABLE="power"
+TODO="sampling-resume"
+OUT_DIR="/pscratch/sd/u/uendert/real_data_results/y1_full_shape/double_blinded/"
+DIR_LOG="$HOME/desi-y1-kp45/blinding/scripts/log"
 
-tracer='LRG'
-template='shapefit-qisoqap'
-theory='velocileptors'
-observable='power'
-todo='emulator sampling'
-outdir='/pscratch/sd/u/uendert/test_y1_full_shape/double_blinded/'
+# Switch to the correct directory
+cd "$DIR_SCRIPT"
 
-echo 'Running the RSD fitting pipeline'
-# Log file path
-log_file=$HOME/desi-y1-kp45/blinding/scripts/double_blinded_log/fit_y1_${tracer}_${tracer_zlim}_${template}_${theory}_${observable}_${todo// /_}.log
-echo $log_file
-srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py --config_path config_double_blinded.yaml --tracer $tracer --template $template --theory $theory --observable $observable --todo ${todo} --outdir $outdir > $log_file 2>&1
+# --- File naming and path setup ---
+BASE_NAME="fit_y1_${TRACER}_${TEMPLATE}_${THEORY}_${OBSERVABLE}_${TODO// /_}"
+JOB_SCRIPT_PATH="${DIR_LOG}/${BASE_NAME}.sh"
+LOG_FILE_PATH="${DIR_LOG}/${BASE_NAME}.log"
+echo "Log will be saved to: $LOG_FILE_PATH"
 
-echo 'Done'
+# --- Job Script Generation ---
+cat > "$JOB_SCRIPT_PATH" << EOF
+#!/bin/bash
+srun -N 1 -n 64 -C cpu -t 04:00:00 --qos interactive --account desi -u python fit_y1.py \
+    --config_path config_double_blinded.yaml \
+    --tracer $TRACER --template $TEMPLATE \
+    --theory $THEORY --observable $OBSERVABLE \
+    --todo $TODO --outdir $OUT_DIR --zlim 0.8 1.1 > "$LOG_FILE_PATH" 2>&1
+EOF
 
-# srun -N 1 -n 64 samplig
-# srun -N 1 -n 4 profiling
+# --- Job Submission ---
+bash "$JOB_SCRIPT_PATH"
+echo "Job submitted with script: $JOB_SCRIPT_PATH"
+

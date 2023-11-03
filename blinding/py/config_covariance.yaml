@@ -7,5 +7,5 @@ pk_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScat
 catalog_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/v0.6/blinded/
 randoms_dir: /global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/v0.6/blinded/
 
-window_kernel: window_kernel_{tracer}_{region}_{zmin}_{zmax}.npz
-output_covariance: cov_gaussian_prerec_{tracer}_{region}_{zmin}_{zmax}.txt
+window_kernel: pk_covariances/window_kernel_{tracer}_{region}_{zmin}_{zmax}.npz
+output_covariance: pk_covariances/cov_gaussian_prerec_{tracer}_{region}_{zmin}_{zmax}.txt

@@ -705,6 +705,9 @@ if __name__ == '__main__':
                 save_fn = [samples_fn(outdir, i=i, base='chain', compressed=post, tracer=tracer, zlim=zlim, **kw_fn) for i in range(nchains)]
                 chains = nchains
                 if 'sampling-resume' in todo:
+                    print(f'## resuming sampling from {save_fn}')
+                    print(f'## chains = {chains}')
+                    
                     sampler = EmceeSampler(likelihood, nwalkers=40, seed=42, chains=save_fn, save_fn=save_fn)
                 else:
                     sampler = EmceeSampler(likelihood, nwalkers=40, seed=42, chains=chains, save_fn=save_fn)

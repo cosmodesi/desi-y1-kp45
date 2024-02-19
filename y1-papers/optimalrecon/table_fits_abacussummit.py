@@ -24,9 +24,9 @@ headers = [
     'Tracer',
     'Redshift',
     'Recon',
-    r'$\langle \alpha_{\rm iso} \rangle$',
+    r'$\langle 1 - \alpha_{\rm iso} \rangle$',
     r'$\langle \sigma_{\alpha_{\rm iso}} \rangle$',
-    r'$\langle \alpha_{\rm AP} \rangle$',
+    r'$\langle 1 - \alpha_{\rm AP} \rangle$',
     r'$\langle \sigma_{\alpha_{\rm AP}} \rangle$',
 ]
 

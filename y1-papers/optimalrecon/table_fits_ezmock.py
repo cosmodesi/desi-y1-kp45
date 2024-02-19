@@ -77,10 +77,6 @@ for tracer in ['BGS_BRIGHT-21.5', 'LRG', 'ELG_LOP', 'QSO']:
                 chain_dir = f'/global/cfs/cdirs/desicollab/users/epaillas/Y1/mocks/EZmocks/v1/fits_bao/mean_precscale1/fits_correlation_{apmode}_pcs2/recon_IFT_recsym_sm{sm}/'
             chain_fn = [Path(chain_dir) / f'chain_{tracer}_GCcomb_{zmin}_{zmax}_sigmas{sigmas[tracer][rec]}_sigmapar{sigmapar[tracer][rec]}_sigmaper{sigmaper[tracer][rec]}_{i}.npy' for i in range(8)]
             chain = read_desilike_chain(chain_fn, apmode=apmode)
-            if rec == 'post':
-                print(tracer, zmin, zmax, (chain.std('qiso') - error_qiso)/error_qiso)
-                if apmode == 'qisoqap':
-                    print(tracer, zmin, zmax, (chain.std('qap') - error_qap)/error_qap)
             mean_qiso = chain.mean('qiso')
             error_qiso = chain.std('qiso')
             if apmode == 'qisoqap':

@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.append("../../../Barry/")     # Change this so that it points to where you have Barry installed
 
-from barry.samplers import DynestySampler
+from barry.samplers import NautilusSampler
 from barry.config import setup
 from barry.models import PowerBeutler2017, CorrBeutler2017
 from barry.datasets.dataset_power_spectrum import PowerSpectrum_DESI_KP4
@@ -21,9 +21,10 @@ if __name__ == "__main__":
     # Set up the Fitting class and Dynesty sampler with 500 live points. 
     # Set remove_output=False to make sure that we don't delete/overwrite existing chains in the same directory.
     fitter = Fitter(dir_name, remove_output=False)
-    sampler = DynestySampler(temp_dir=dir_name, nlive=500)
+    sampler = NautilusSampler(temp_dir=dir_name)
     
     # All the tracer types, with zmin and zmax arrays
+    version = 0.4
     tracers = {'BGS_BRIGHT-21.5': [[0.1, 0.4]], 
            'LRG': [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1]], 
            'ELG_LOPnotqso': [[0.8, 1.1], [1.1, 1.6]],
@@ -31,6 +32,12 @@ if __name__ == "__main__":
 
     # The different sky areas
     caps = ["NGC", "SGC", "GCcomb"]
+    
+    # Reconstruction parameters
+    reconsmooth = {'BGS_BRIGHT-21.5': [15, "IFTrecsym"], 
+         'LRG': [10, "MGrecsym"], 
+         'ELG_LOPnotqso': [10, "MGrecsym"],
+         'QSO': [15, "IFTrecsym"]}
     
     # The optimal sigma values. For now, I've chosen these based on intuition rather than 
     # mock fits, so should be updated as appropriate. These are a set of dictionaries within dictionaries
@@ -58,10 +65,10 @@ if __name__ == "__main__":
             for cap in caps:
         
                 # Loop over pre-recon measurements only for now, but different recon types can be added later.
-                for recon in [None]:
+                for recon in [None, 'sym']:
 
                     # Load in the appropriate pickle file. Fit only moonopole and quadrupole. Cut to 50 Mpc/h < s < 150 Mpc/h
-                    name = f"DESI_Y1_BLIND_{t.lower()}_{cap.lower()}_{zs[0]}_{zs[1]}.pkl"
+                    name = f"DESI_Y1_BLIND_v{version}_sm{reconsmooth[t][0]}_{t.lower()}_{cap.lower()}_{zs[0]}_{zs[1]}_xi.pkl"
                     dataset_xi = CorrelationFunction_DESI_KP4(
                         recon=recon,
                         fit_poles=[0, 2],

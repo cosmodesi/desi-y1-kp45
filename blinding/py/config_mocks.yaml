@@ -1,0 +1,14 @@
+# Directory configuration holding various paths used in the script.
+directories:
+  # Base paths for easier modification.
+  base_path: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/{test_case}/LSScats/blinded/"
+
+  # Paths related to pk and xi data with placeholders for test cases.
+  # /global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/test_w0-0.9040043101843285_wa0.025634205416364297_fnl-20/LSScats/blinded/pk/
+  pk: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/{test_case}/LSScats/blinded/pk/"
+  xi: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena_fnl/{test_case}/LSScats/blinded/xi/"
+
+  # Paths to external tools used in the script.
+  external_tools:  
+    thecov: "/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/pk_xi_measurements/CovPk/"
+    rascal: "/global/cfs/cdirs/desi/users/mrash/RascalC/AbacusSummit/CutSky/Y1-blinding/" # contains both blinding and unblinding cov
